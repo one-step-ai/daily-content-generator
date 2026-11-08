@@ -1,0 +1,74 @@
+name: Daily free business and AI presenter content
+on:
+  schedule:
+    - cron: '13 1 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: daily-business-content
+  cancel-in-progress: false
+jobs:
+  business-video:
+    # This file is a proposal until copied to a dedicated owner-approved public repository.
+    if: github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.12'
+      - name: Install free local rendering dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends espeak-ng libsndfile1
+          python -m pip install -r marketing/automation/requirements.txt
+      - name: Download free versioned rendering assets
+        run: python marketing/automation/bootstrap.py
+      - name: Render and upload today's business video
+        env:
+          MARKETING_UPLOAD_KEY: ${{ secrets.MARKETING_UPLOAD_KEY }}
+          MARKETING_UPLOAD_URL: ${{ secrets.MARKETING_UPLOAD_URL }}
+        run: |
+          test -n "$MARKETING_UPLOAD_KEY"
+          python marketing/automation/daily_video.py
+  ai-presenter:
+    if: github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.12'
+      - name: Install free speech dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends espeak-ng libsndfile1 ffmpeg libgl1
+          python -m pip install -r marketing/automation/requirements.txt
+          python marketing/automation/bootstrap.py
+      - name: Create today's factual script and speech
+        run: python marketing/automation/ugc_voice.py
+      - name: Fetch pinned animation source and verified models
+        run: python marketing/automation/prepare_sadtalker.py
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.10'
+      - name: Install compatible CPU animation dependencies
+        run: |
+          python -m venv state/sadtalker-venv
+          state/sadtalker-venv/bin/python -m pip install 'setuptools==69.5.1' wheel
+          state/sadtalker-venv/bin/python -m pip install 'torch==1.13.1+cpu' 'torchvision==0.14.1+cpu' 'torchaudio==0.13.1+cpu' --extra-index-url https://download.pytorch.org/whl/cpu
+          state/sadtalker-venv/bin/python -m pip install -r state/SadTalker/requirements.txt -c marketing/automation/sadtalker-constraints.txt
+      - name: Render and validate 30-second-plus fictional AI presenter
+        run: state/sadtalker-venv/bin/python marketing/automation/ugc_render.py --sadtalker state/SadTalker --render-only
+      - name: Upload today's validated AI presenter video
+        env:
+          MARKETING_UPLOAD_KEY: ${{ secrets.MARKETING_UPLOAD_KEY }}
+          MARKETING_UPLOAD_URL: ${{ secrets.MARKETING_UPLOAD_URL }}
+        run: state/sadtalker-venv/bin/python marketing/automation/ugc_render.py --sadtalker state/SadTalker --finish-only
