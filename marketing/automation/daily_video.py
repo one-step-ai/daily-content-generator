@@ -171,11 +171,27 @@ def upload(path,day):
     receipt.write_text(json.dumps(result),encoding='utf-8');return result
 
 
+def already_uploaded(day):
+    key=os.environ.get('MARKETING_UPLOAD_KEY') or protect(CONFIG.read_bytes(),True).decode()
+    req=urllib.request.Request(API.replace('mode=upload-video','mode=video-status'),data=b'{}',method='POST',headers={'Content-Type':'application/json','x-marketing-upload-key':key})
+    try:
+        with urllib.request.urlopen(req,timeout=20) as response:result=json.load(response)
+        if result.get('day')==day and result.get('businessReady') is True:
+            OUT.mkdir(parents=True,exist_ok=True)
+            (OUT/(day+'.uploaded.json')).write_text(json.dumps({'day':day,'source':'existing-cloud-media'}),encoding='utf-8')
+            return True
+    except Exception:
+        pass # Rendering remains the free fallback; upload admission is still day-idempotent.
+    return False
+
+
 def main():
     parser=argparse.ArgumentParser();parser.add_argument('--setup',action='store_true');parser.add_argument('--render-only',action='store_true')
     args=parser.parse_args()
     if args.setup:setup();return
     day=datetime.now(timezone(timedelta(hours=4))).date().isoformat()
+    if not args.render_only and already_uploaded(day):
+        print(json.dumps({'day':day,'uploaded':True,'reused_cloud_media':True}));return
     path=render(day)
     if not args.render_only:upload(path,day)
     print(json.dumps({'day':day,'rendered':True,'uploaded':not args.render_only}))
