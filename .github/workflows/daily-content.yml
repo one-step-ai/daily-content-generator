@@ -117,7 +117,7 @@ jobs:
           MEDIA_BUILD: ${{ steps.plan.outputs.build }}
           MEDIA_DAY: ${{ steps.plan.outputs.day }}
         run: |
-          gh release view "$MEDIA_BUILD" >/dev/null 2>&1 || gh release create "$MEDIA_BUILD" --draft --target "$GITHUB_SHA" --title "Generated media $MEDIA_DAY" --notes "Generic fictional-presenter build files only. No CRM, customer records or credentials."
+          gh release view "$MEDIA_BUILD" >/dev/null 2>&1 || gh release create "$MEDIA_BUILD" --draft --target main --title "Generated media $MEDIA_DAY" --notes "Generic fictional-presenter build files only. No CRM, customer records or credentials."
           gh release upload "$MEDIA_BUILD" --clobber "state/daily-marketing/$MEDIA_DAY-ugc.wav" "state/daily-marketing/$MEDIA_DAY-ugc.json"
   ugc-render:
     needs: ugc-prepare

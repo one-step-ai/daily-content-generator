@@ -74,8 +74,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "lip-test-$GITHUB_RUN_ID" --draft --target "$GITHUB_SHA" --title 'Fictional presenter lip-sync test' --notes 'Original voice and script preserved. Generic AI presenter only.'
-          gh release upload "lip-test-$GITHUB_RUN_ID" state/lip-test/lip-sync-candidate.mp4
+          gh release view "lip-test-$GITHUB_RUN_ID" >/dev/null 2>&1 || gh release create "lip-test-$GITHUB_RUN_ID" --draft --target main --title 'Fictional presenter lip-sync test' --notes 'Original voice and script preserved. Generic AI presenter only.'
+          gh release upload "lip-test-$GITHUB_RUN_ID" --clobber state/lip-test/lip-sync-candidate.mp4
   head-motion:
     if: github.event.repository.private == false && inputs.test_part != 'lip'
     runs-on: ubuntu-24.04
@@ -118,5 +118,5 @@ jobs:
           SOURCE=$(find state/head-test/render -maxdepth 1 -name '*.mp4' -print -quit)
           test -n "$SOURCE"
           cp "$SOURCE" state/head-test/head-motion-candidate.mp4
-          gh release create "head-test-$GITHUB_RUN_ID" --draft --target "$GITHUB_SHA" --title 'Fictional presenter head-motion test' --notes 'Speech-aware motion comparison. Original voice and script preserved.'
-          gh release upload "head-test-$GITHUB_RUN_ID" state/head-test/head-motion-candidate.mp4
+          gh release view "head-test-$GITHUB_RUN_ID" >/dev/null 2>&1 || gh release create "head-test-$GITHUB_RUN_ID" --draft --target main --title 'Fictional presenter head-motion test' --notes 'Speech-aware motion comparison. Original voice and script preserved.'
+          gh release upload "head-test-$GITHUB_RUN_ID" --clobber state/head-test/head-motion-candidate.mp4

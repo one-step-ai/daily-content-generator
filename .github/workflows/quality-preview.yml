@@ -86,5 +86,5 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           MEDIA_BUILD="visual-preview-$GITHUB_RUN_ID"
-          gh release view "$MEDIA_BUILD" >/dev/null 2>&1 || gh release create "$MEDIA_BUILD" --draft --target "$GITHUB_SHA" --title 'Fictional presenter quality sample' --notes 'Six-second generic visual test. Original speech preserved. No CRM data or credentials.'
+          gh release view "$MEDIA_BUILD" >/dev/null 2>&1 || gh release create "$MEDIA_BUILD" --draft --target main --title 'Fictional presenter quality sample' --notes 'Six-second generic visual test. Original speech preserved. No CRM data or credentials.'
           gh release upload "$MEDIA_BUILD" --clobber state/quality-preview/one-step-visual-quality-preview.mp4 state/quality-preview/preview-frame.png

@@ -1,0 +1,23 @@
+name: Free media archive verification
+on:
+  workflow_dispatch:
+    inputs:
+      target_revision:
+        type: string
+        default: main
+        description: Existing source revision or reserved build tag
+permissions:
+  contents: write
+jobs:
+  archive:
+    if: github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Verify draft media archival with the scoped job token
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TARGET_REVISION: ${{ inputs.target_revision }}
+        run: |
+          gh release create "archive-smoke-$GITHUB_RUN_ID" --draft --target "$TARGET_REVISION" --title 'Generic media archive verification' --notes 'No customer data, media or credentials.'
