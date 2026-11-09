@@ -56,7 +56,9 @@ def main():
                     faces=classifier.detectMultiScale(gray,scaleFactor=1.08,minNeighbors=5,minSize=(100,100))
                     if len(faces):
                         x,y,fw,fh=max(faces,key=lambda b:b[2]*b[3])
-                        box=np.array([x-.12*fw,y-.10*fh,x+1.12*fw,y+1.28*fh],dtype=float)
+                        # Put the mid-crop masking boundary at the nose, matching
+                        # MuseTalk's landmark-based training crop for this presenter.
+                        box=np.array([x+.06*fw,y+.20*fh,x+.94*fw,y+1.08*fh],dtype=float)
                         previous=box if previous is None else .22*box+.78*previous
                     elif previous is None:raise RuntimeError('No reliable frontal face detected')
                 x1,y1,x2,y2=np.rint(previous).astype(int)

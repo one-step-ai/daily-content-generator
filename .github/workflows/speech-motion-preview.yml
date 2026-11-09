@@ -11,6 +11,14 @@ on:
         options: [all, head, lip]
         default: all
         description: Run both comparisons or reuse a completed comparison
+      seconds:
+        type: number
+        default: 3
+        description: Length of the lip-sync comparison
+      finish_graphics:
+        type: boolean
+        default: false
+        description: Add the current graphics to a raw head-motion comparison
 permissions:
   contents: write
 jobs:
@@ -31,6 +39,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends ffmpeg libgl1 libsndfile1
           python -m pip install torch==2.2.2+cpu torchvision==0.17.2+cpu --extra-index-url https://download.pytorch.org/whl/cpu
           python -m pip install -r marketing/automation/musetalk-cpu-requirements.txt
+          python -m pip install arabic-reshaper==3.1.0 python-bidi==0.6.12 imageio-ffmpeg==0.4.9
           python marketing/automation/prepare_musetalk.py
       - name: Refine mouth timing against the original voice
         env:
@@ -38,13 +47,29 @@ jobs:
           SOURCE_RELEASE: ${{ inputs.source_release }}
           OMP_NUM_THREADS: '4'
           MKL_NUM_THREADS: '4'
+          TEST_SECONDS: ${{ inputs.seconds }}
+          FINISH_GRAPHICS: ${{ inputs.finish_graphics }}
         run: |
           mkdir -p state/lip-test
           gh release download "$SOURCE_RELEASE" --pattern '*.mp4' --dir state/lip-test
           SOURCE=$(find state/lip-test -maxdepth 1 -name '*.mp4' -print -quit)
           test -n "$SOURCE"
           ffmpeg -y -v error -i "$SOURCE" -vn -ar 16000 state/lip-test/voice.wav
-          python marketing/automation/lip_refine.py --source "$SOURCE" --audio state/lip-test/voice.wav --output state/lip-test/lip-sync-candidate.mp4 --seconds 3
+          ffmpeg -y -v error -i "$SOURCE" -an -vf 'scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280,fps=25' -c:v libx264 -preset fast -crf 18 state/lip-test/source-720.mp4
+          python marketing/automation/lip_refine.py --source state/lip-test/source-720.mp4 --audio state/lip-test/voice.wav --output state/lip-test/lip-sync-candidate.mp4 --seconds "$TEST_SECONDS"
+          if [ "$FINISH_GRAPHICS" = true ]; then
+            mkdir -p state/marketing-cache
+            curl --fail --location --silent --show-error https://raw.githubusercontent.com/google/fonts/main/ofl/sora/Sora%5Bwght%5D.ttf --output state/marketing-cache/sora.ttf
+            curl --fail --location --silent --show-error https://raw.githubusercontent.com/google/fonts/main/ofl/notonaskharabic/NotoNaskhArabic%5Bwght%5D.ttf --output state/marketing-cache/arabic.ttf
+            python - <<'PY'
+            import json,os
+            from pathlib import Path
+            seconds=float(os.environ['TEST_SECONDS'])
+            Path('state/lip-test/metadata.json').write_text(json.dumps({'duration':seconds,'cues':[{'start':0,'end':seconds,'en':'Turn enquiries into useful next steps.','ar':'فكرة عملية لتنظيم استفسارات العملاء في شركتك.'}]},ensure_ascii=False),encoding='utf-8')
+            PY
+            python marketing/automation/ugc_style.py --source state/lip-test/lip-sync-candidate.mp4 --metadata state/lip-test/metadata.json --output state/lip-test/finished.mp4
+            mv state/lip-test/finished.mp4 state/lip-test/lip-sync-candidate.mp4
+          fi
       - name: Save the generated lip-sync comparison
         env:
           GH_TOKEN: ${{ github.token }}
