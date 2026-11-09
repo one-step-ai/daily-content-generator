@@ -6,11 +6,16 @@ on:
         type: string
         required: true
         description: Draft release containing the existing fictional presenter clip
+      test_part:
+        type: choice
+        options: [all, head, lip]
+        default: all
+        description: Run both comparisons or reuse a completed comparison
 permissions:
   contents: write
 jobs:
   lip-sync:
-    if: github.event.repository.private == false
+    if: github.event.repository.private == false && inputs.test_part != 'head'
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
@@ -47,7 +52,7 @@ jobs:
           gh release create "lip-test-$GITHUB_RUN_ID" --draft --target "$GITHUB_SHA" --title 'Fictional presenter lip-sync test' --notes 'Original voice and script preserved. Generic AI presenter only.'
           gh release upload "lip-test-$GITHUB_RUN_ID" state/lip-test/lip-sync-candidate.mp4
   head-motion:
-    if: github.event.repository.private == false
+    if: github.event.repository.private == false && inputs.test_part != 'lip'
     runs-on: ubuntu-24.04
     timeout-minutes: 100
     steps:

@@ -44,7 +44,7 @@ def main():
     mask=cv2.GaussianBlur(mask,(31,31),9)[...,None]
     silent=target.with_name(target.stem+'.silent.mp4')
     enc=subprocess.Popen(['ffmpeg','-y','-v','error','-f','rawvideo','-pix_fmt','bgr24','-s',f'{w}x{h}',
-        '-r','25','-i','pipe:0','-an','-c:v','libx264','-preset','fast','-crf','18','-pix_fmt','yuv420p',str(silent)],stdin=subprocess.PIPE)
+        '-r','25','-i','pipe:0','-an','-c:v','libx264','-preset','fast','-crf','18','-maxrate','1500k','-bufsize','3000k','-pix_fmt','yuv420p',str(silent)],stdin=subprocess.PIPE)
     started=time.monotonic();completed=0
     try:
         with torch.inference_mode():

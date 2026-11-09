@@ -39,6 +39,7 @@ def main():
     p=argparse.ArgumentParser(add_help=False);p.add_argument('--motion-audio',required=True);p.add_argument('--motion-offset',type=float,default=0)
     args,remaining=p.parse_known_args();import numpy as np
     import torch
+    sys.path.insert(0,str(Path.cwd()))
     import src.generate_facerender_batch as batch_module
     import src.generate_batch as audio_module
     import src.facerender.modules.make_animation as animation
