@@ -13,7 +13,9 @@ W, H, FPS = 720, 1280, 25
 
 def caption_chunks(text, max_words=6):
     words = text.split()
-    return [' '.join(words[i:i+max_words]) for i in range(0, len(words), max_words)] or ['']
+    count=max(1,math.ceil(len(words)/max_words))
+    width=max(1,math.ceil(len(words)/count))
+    return [' '.join(words[i:i+width]) for i in range(0, len(words), width)] or ['']
 
 
 def active_cue(cues, seconds):
@@ -30,7 +32,12 @@ def render(source, metadata, target, seconds=None, offset=0):
         import imageio_ffmpeg
         ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
     data = json.loads(Path(metadata).read_text(encoding='utf-8'))
-    duration = min(float(data['duration'])-offset, seconds or float(data['duration']))
+    import imageio_ffmpeg
+    probe=imageio_ffmpeg.read_frames(str(source));source_info=next(probe);probe.close()
+    source_duration=float(source_info['duration'])
+    if abs(source_duration-float(data['duration']))>1:
+        raise ValueError('Caption timeline does not match the source video')
+    duration = min(source_duration-offset, seconds or source_duration)
     if duration <= 0:
         raise ValueError('No source duration remains')
     cues = data['cues']
@@ -44,7 +51,8 @@ def render(source, metadata, target, seconds=None, offset=0):
     encoder = subprocess.Popen([ffmpeg, '-y', '-v', 'error', '-f', 'rawvideo', '-pix_fmt', 'rgb24',
         '-s', '720x1280', '-r', str(FPS), '-i', 'pipe:0', '-ss', str(offset), '-i', str(source),
         '-map', '0:v:0', '-map', '1:a:0', '-t', str(duration), '-c:v', 'libx264', '-preset', 'fast',
-        '-crf', '18', '-maxrate', '1500k', '-bufsize', '3000k', '-pix_fmt', 'yuv420p',
+        '-crf', '18', '-maxrate', str(min(1500,max(500,int(10800000*8/duration/1000)-128)))+'k',
+        '-bufsize', '3000k', '-pix_fmt', 'yuv420p',
         '-c:a', 'copy', '-movflags', '+faststart', str(target)], stdin=subprocess.PIPE)
 
     def centered(draw, text, y, font, fill=ivory):
@@ -76,7 +84,7 @@ def render(source, metadata, target, seconds=None, offset=0):
             im=enlarged.crop((left,top,left+W,top+H))
             overlay=Image.new('RGBA',(W,H));d=ImageDraw.Draw(overlay)
             # Covers the legacy tiny label in sample input; native new renders have no baked labels.
-            d.rounded_rectangle((64,67,656,153),radius=22,fill=(13,17,21,247))
+            d.rounded_rectangle((64,67,656,153),radius=22,fill=(13,17,21,255))
             d.text((88,89),'ONE STEP',font=fonts[28],fill=gold)
             d.text((328,94),'FICTIONAL AI PRESENTER',font=fonts[20],fill=ivory)
             d.rectangle((89,136,631,139),fill=(226,188,87,90))
@@ -84,11 +92,11 @@ def render(source, metadata, target, seconds=None, offset=0):
             for y in range(740,950):
                 a=round(240*(y-740)/210)
                 d.line((0,y,W,y),fill=(10,15,20,a),width=1)
-            d.rectangle((0,950,W,H),fill=(10,15,20,250))
+            d.rectangle((0,950,W,H),fill=(10,15,20,255))
             intro=ci==0;closing=len(cues)>1 and ci==len(cues)-1
-            label='BUSINESS, ORGANISED' if intro else 'LET’S BUILD YOUR NEXT STEP' if closing else f'PRACTICAL STEP {min(ci,3):02}'
+            label='BUSINESS, ORGANISED' if intro else 'LET’S BUILD YOUR NEXT STEP' if closing else 'START WITH ONE WORKFLOW' if ci==len(cues)-2 else f'PRACTICAL STEP {min(ci,3):02}'
             d.text((64,815),label,font=fonts[20],fill=gold)
-            title='Turn enquiries into next steps' if intro else 'Websites. CRM. Automation.' if closing else cue['en'].split('.')[0]+'.'
+            title=data.get('title','Turn enquiries into next steps') if intro else 'Websites. CRM. Automation.' if closing else cue['en'].split('.')[0]+'.'
             d.text((64,850),title,font=fit(d,title),fill=ivory)
             # A small animated process diagram illustrates the idea without fictional client data.
             if not closing:
@@ -111,7 +119,7 @@ def render(source, metadata, target, seconds=None, offset=0):
                 else:line=trial
             if line:lines.append(line)
             for row,line in enumerate(lines):
-                centered(d,get_display(arabic_reshaper.reshape(line)),990+row*59,arfont)
+                centered(d,get_display(arabic_reshaper.reshape(line)),982+row*54,arfont)
             d.rounded_rectangle((64,1120,656,1124),radius=2,fill=(65,73,78,255))
             d.rounded_rectangle((64,1120,65+int(591*min(1,t/data['duration'])),1124),radius=2,fill=gold)
             im=Image.alpha_composite(im,overlay).convert('RGB')

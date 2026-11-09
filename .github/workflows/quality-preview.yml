@@ -7,7 +7,7 @@ on:
         required: true
         type: string
 permissions:
-  contents: read
+  contents: write
 concurrency:
   group: visual-quality-preview
   cancel-in-progress: false
@@ -58,9 +58,10 @@ jobs:
           SOURCE_RENDER=$(find state/quality-preview/render -maxdepth 1 -name '*.mp4' -print -quit)
           test -n "$SOURCE_RENDER"
           "$GRAPHICS_PYTHON" marketing/automation/ugc_style.py --source "$SOURCE_RENDER" --metadata state/quality-preview/metadata.json --output state/quality-preview/one-step-visual-quality-preview.mp4 --seconds 6
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: six-second-visual-quality-preview
-          path: state/quality-preview/one-step-visual-quality-preview.mp4
-          retention-days: 1
-          if-no-files-found: error
+      - name: Save generic quality sample without metered Actions storage
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          MEDIA_BUILD="visual-preview-$GITHUB_RUN_ID"
+          gh release view "$MEDIA_BUILD" >/dev/null 2>&1 || gh release create "$MEDIA_BUILD" --draft --target "$GITHUB_SHA" --title 'Fictional presenter quality sample' --notes 'Six-second generic visual test. Original speech preserved. No CRM data or credentials.'
+          gh release upload "$MEDIA_BUILD" --clobber state/quality-preview/one-step-visual-quality-preview.mp4

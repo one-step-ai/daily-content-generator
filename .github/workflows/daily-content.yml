@@ -4,6 +4,19 @@ on:
     - cron: '13 1 * * *'
     - cron: '13 5 * * *'
   workflow_dispatch:
+    inputs:
+      quality_preview:
+        description: Render a quality sample without publishing or changing today's uploads
+        type: boolean
+        default: false
+      source_video_url:
+        description: Existing public UGC video to preserve original audio in a quality preview
+        type: string
+        default: ''
+      prepare_only:
+        description: Verify source preparation without rendering or publishing
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -45,10 +58,16 @@ jobs:
         run: |
           test -n "$MARKETING_UPLOAD_KEY"
           python marketing/automation/daily_video.py
-  ai-presenter:
+  ugc-prepare:
     if: github.event.repository.private == false
     runs-on: ubuntu-24.04
-    timeout-minutes: 330
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    outputs:
+      ready: ${{ steps.plan.outputs.ready }}
+      day: ${{ steps.plan.outputs.day }}
+      build: ${{ steps.plan.outputs.build }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -62,34 +81,172 @@ jobs:
           MARKETING_UPLOAD_KEY: ${{ secrets.MARKETING_UPLOAD_KEY }}
           MARKETING_UPLOAD_URL: ${{ secrets.MARKETING_UPLOAD_URL }}
         run: python marketing/automation/cloud_status.py
-      - name: Install free speech dependencies
-        if: steps.ready.outputs.ugc_ready != 'true'
+      - name: Plan duplicate-free media work
+        id: plan
+        env:
+          UGC_READY: ${{ steps.ready.outputs.ugc_ready }}
+          QUALITY_PREVIEW: ${{ inputs.quality_preview }}
+        run: |
+          python - <<'PY'
+          from datetime import datetime,timezone,timedelta
+          import os
+          day=datetime.now(timezone(timedelta(hours=4))).date().isoformat()
+          ready=os.environ['UGC_READY']=='true' and os.environ['QUALITY_PREVIEW']!='true'
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f:
+              f.write('ready='+str(ready).lower()+'\n'+'day='+day+'\n'+'build=media-'+day+'-'+os.environ['GITHUB_RUN_ID']+'\n')
+          PY
+      - name: Prepare unchanged speech and reviewed captions
+        if: steps.plan.outputs.ready != 'true'
+        env:
+          QUALITY_PREVIEW: ${{ inputs.quality_preview }}
+          SOURCE_VIDEO_URL: ${{ inputs.source_video_url }}
+          MEDIA_DAY: ${{ steps.plan.outputs.day }}
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends espeak-ng libsndfile1 ffmpeg libgl1
+          sudo apt-get install -y --no-install-recommends ffmpeg espeak-ng libsndfile1
           python -m pip install -r marketing/automation/requirements.txt
           python marketing/automation/bootstrap.py
-      - name: Create today's factual script and speech
-        if: steps.ready.outputs.ugc_ready != 'true'
-        run: python marketing/automation/ugc_voice.py
-      - name: Fetch pinned animation source and verified models
-        if: steps.ready.outputs.ugc_ready != 'true'
-        run: python marketing/automation/prepare_sadtalker.py
+          python marketing/automation/ugc_voice.py
+          if [ "$QUALITY_PREVIEW" = true ]; then
+            python marketing/automation/quality_preview.py "$SOURCE_VIDEO_URL" --full-metadata "state/daily-marketing/$MEDIA_DAY-ugc.json"
+          fi
+      - name: Store generic build inputs outside metered Actions artifacts
+        if: steps.plan.outputs.ready != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MEDIA_BUILD: ${{ steps.plan.outputs.build }}
+          MEDIA_DAY: ${{ steps.plan.outputs.day }}
+        run: |
+          gh release view "$MEDIA_BUILD" >/dev/null 2>&1 || gh release create "$MEDIA_BUILD" --draft --target "$GITHUB_SHA" --title "Generated media $MEDIA_DAY" --notes "Generic fictional-presenter build files only. No CRM, customer records or credentials."
+          gh release upload "$MEDIA_BUILD" --clobber "state/daily-marketing/$MEDIA_DAY-ugc.wav" "state/daily-marketing/$MEDIA_DAY-ugc.json"
+  ugc-render:
+    needs: ugc-prepare
+    if: needs.ugc-prepare.outputs.ready != 'true' && inputs.prepare_only != true
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        clip: [0, 1, 2, 3, 4, 5]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
-        if: steps.ready.outputs.ugc_ready != 'true'
         with:
           python-version: '3.10'
-      - name: Install compatible CPU animation dependencies
-        if: steps.ready.outputs.ugc_ready != 'true'
+      - name: Fetch generic speech and verified animation source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MEDIA_BUILD: ${{ needs.ugc-prepare.outputs.build }}
         run: |
+          mkdir -p state/daily-marketing
+          gh release download "$MEDIA_BUILD" --pattern '*.wav' --pattern '*.json' --dir state/daily-marketing
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg libgl1 libsndfile1
+          python marketing/automation/prepare_sadtalker.py --size 512
           python -m venv state/sadtalker-venv
           state/sadtalker-venv/bin/python -m pip install 'setuptools==69.5.1' wheel
           state/sadtalker-venv/bin/python -m pip install 'torch==1.13.1+cpu' 'torchvision==0.14.1+cpu' 'torchaudio==0.13.1+cpu' --extra-index-url https://download.pytorch.org/whl/cpu
           state/sadtalker-venv/bin/python -m pip install -r state/SadTalker/requirements.txt -c marketing/automation/sadtalker-constraints.txt
-      - name: Render and validate 30-second-plus fictional AI presenter
+      - name: Render detailed presenter shot with natural head movement
+        env:
+          OMP_NUM_THREADS: '4'
+          MKL_NUM_THREADS: '4'
+          OPENBLAS_NUM_THREADS: '4'
+          MEDIA_DAY: ${{ needs.ugc-prepare.outputs.day }}
+          CLIP_INDEX: ${{ matrix.clip }}
+        run: state/sadtalker-venv/bin/python marketing/automation/ugc_chunks.py render --day "$MEDIA_DAY" --index "$CLIP_INDEX"
+      - name: Store this generated shot
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MEDIA_BUILD: ${{ needs.ugc-prepare.outputs.build }}
+          CLIP_INDEX: ${{ matrix.clip }}
+        run: gh release upload "$MEDIA_BUILD" --clobber "state/ugc-clips/clip-$CLIP_INDEX.mp4"
+  ugc-publish:
+    needs: [ugc-prepare, ugc-render]
+    if: needs.ugc-prepare.outputs.ready != 'true' && needs.ugc-render.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.12'
+      - name: Assemble all six shots with the original uncut speech
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MEDIA_BUILD: ${{ needs.ugc-prepare.outputs.build }}
+          MEDIA_DAY: ${{ needs.ugc-prepare.outputs.day }}
+        run: |
+          mkdir -p state/daily-marketing state/ugc-clips
+          gh release download "$MEDIA_BUILD" --pattern '*.wav' --pattern '*.json' --dir state/daily-marketing
+          gh release download "$MEDIA_BUILD" --pattern 'clip-*.mp4' --dir state/ugc-clips
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg libsndfile1
+          python -m pip install -r marketing/automation/requirements.txt
+          python marketing/automation/bootstrap.py
+          python marketing/automation/ugc_chunks.py assemble --day "$MEDIA_DAY"
+      - name: Validate and upload today's enhanced video
+        if: inputs.quality_preview != true
+        env:
+          MARKETING_UPLOAD_KEY: ${{ secrets.MARKETING_UPLOAD_KEY }}
+          MARKETING_UPLOAD_URL: ${{ secrets.MARKETING_UPLOAD_URL }}
+        run: python marketing/automation/ugc_render.py --sadtalker state/SadTalker --finish-only
+      - name: Save completed visual quality preview
+        if: inputs.quality_preview == true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MEDIA_BUILD: ${{ needs.ugc-prepare.outputs.build }}
+          MEDIA_DAY: ${{ needs.ugc-prepare.outputs.day }}
+        run: gh release upload "$MEDIA_BUILD" --clobber "state/daily-marketing/$MEDIA_DAY-ugc.mp4"
+  ugc-free-fallback:
+    needs: [ugc-prepare, ugc-render, ugc-publish]
+    if: always() && github.event.repository.private == false && inputs.quality_preview != true && needs.ugc-prepare.outputs.ready != 'true' && needs.ugc-prepare.result == 'success' && (needs.ugc-render.result == 'failure' || needs.ugc-publish.result == 'failure')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.10'
+      - name: Check whether the earlier upload already succeeded
+        id: ready
+        env:
+          MARKETING_UPLOAD_KEY: ${{ secrets.MARKETING_UPLOAD_KEY }}
+          MARKETING_UPLOAD_URL: ${{ secrets.MARKETING_UPLOAD_URL }}
+        run: python marketing/automation/cloud_status.py
+      - name: Route failed high-detail rendering to the free compatible renderer
         if: steps.ready.outputs.ugc_ready != 'true'
-        run: state/sadtalker-venv/bin/python marketing/automation/ugc_render.py --sadtalker state/SadTalker --render-only
-      - name: Upload today's validated AI presenter video
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MEDIA_BUILD: ${{ needs.ugc-prepare.outputs.build }}
+        run: |
+          mkdir -p state/daily-marketing
+          gh release download "$MEDIA_BUILD" --pattern '*.wav' --pattern '*.json' --dir state/daily-marketing
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg libgl1 libsndfile1
+          python marketing/automation/prepare_sadtalker.py --size 256
+          python -m venv state/sadtalker-venv
+          state/sadtalker-venv/bin/python -m pip install 'setuptools==69.5.1' wheel
+          state/sadtalker-venv/bin/python -m pip install 'torch==1.13.1+cpu' 'torchvision==0.14.1+cpu' 'torchaudio==0.13.1+cpu' --extra-index-url https://download.pytorch.org/whl/cpu
+          state/sadtalker-venv/bin/python -m pip install -r state/SadTalker/requirements.txt -c marketing/automation/sadtalker-constraints.txt
+          state/sadtalker-venv/bin/python -m pip install arabic-reshaper==3.1.0 python-bidi==0.6.12
+          # The graphics renderer needs only the two openly licensed font assets here.
+          mkdir -p state/marketing-cache
+          curl --fail --location --silent --show-error https://raw.githubusercontent.com/google/fonts/main/ofl/sora/Sora%5Bwght%5D.ttf --output state/marketing-cache/sora.ttf
+          curl --fail --location --silent --show-error https://raw.githubusercontent.com/google/fonts/main/ofl/notonaskharabic/NotoNaskhArabic%5Bwght%5D.ttf --output state/marketing-cache/arabic.ttf
+          state/sadtalker-venv/bin/python marketing/automation/ugc_render.py --sadtalker state/SadTalker --size 256 --render-only
+      - name: Upload the validated fallback without duplicate posting
         if: steps.ready.outputs.ugc_ready != 'true'
         env:
           MARKETING_UPLOAD_KEY: ${{ secrets.MARKETING_UPLOAD_KEY }}
