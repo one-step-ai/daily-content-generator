@@ -22,7 +22,7 @@ def active_cue(cues, seconds):
     return next((i for i, c in enumerate(cues) if c['start'] <= seconds < c['end']), len(cues)-1)
 
 
-def render(source, metadata, target, seconds=None, offset=0):
+def render(source, metadata, target, seconds=None, offset=0, animate_camera=True):
     import arabic_reshaper
     from bidi.algorithm import get_display
     from PIL import Image, ImageDraw, ImageFont
@@ -78,7 +78,7 @@ def render(source, metadata, target, seconds=None, offset=0):
             progress=max(0,min(1,(t-cue['start'])/max(.01,cue['end']-cue['start'])))
             im=Image.frombytes('RGB',(W,H),bytes(raw)).convert('RGBA')
             # A restrained push-in changes at each thought; facial motion remains audio-driven.
-            zoom=1+.025*progress
+            zoom=1+.025*progress if animate_camera else 1
             enlarged=im.resize((round(W*zoom),round(H*zoom)),Image.Resampling.LANCZOS)
             left=(enlarged.width-W)//2;top=round((enlarged.height-H)*.28)
             im=enlarged.crop((left,top,left+W,top+H))
@@ -136,4 +136,5 @@ def render(source, metadata, target, seconds=None, offset=0):
 if __name__=='__main__':
     p=argparse.ArgumentParser();p.add_argument('--source',required=True);p.add_argument('--metadata',required=True)
     p.add_argument('--output',required=True);p.add_argument('--seconds',type=float);p.add_argument('--offset',type=float,default=0)
-    a=p.parse_args();print(json.dumps(render(a.source,a.metadata,a.output,a.seconds,a.offset)))
+    p.add_argument('--no-zoom',action='store_true')
+    a=p.parse_args();print(json.dumps(render(a.source,a.metadata,a.output,a.seconds,a.offset,not a.no_zoom)))

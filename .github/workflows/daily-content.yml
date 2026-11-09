@@ -212,6 +212,8 @@ jobs:
     if: always() && github.event.repository.private == false && inputs.quality_preview != true && needs.ugc-prepare.outputs.ready != 'true' && needs.ugc-prepare.result == 'success' && (needs.ugc-render.result == 'failure' || needs.ugc-publish.result == 'failure')
     runs-on: ubuntu-24.04
     timeout-minutes: 180
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
