@@ -1,0 +1,66 @@
+name: Free visual quality preview
+on:
+  workflow_dispatch:
+    inputs:
+      source_video_url:
+        description: Existing public UGC video; original audio is preserved
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: visual-quality-preview
+  cancel-in-progress: false
+jobs:
+  visual-preview:
+    if: github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        id: graphics
+        with:
+          python-version: '3.12'
+      - name: Prepare free graphics and preserve original speech
+        env:
+          SOURCE_VIDEO_URL: ${{ inputs.source_video_url }}
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg libgl1 libsndfile1
+          python -m pip install -r marketing/automation/requirements.txt
+          python marketing/automation/bootstrap.py
+          python marketing/automation/quality_preview.py "$SOURCE_VIDEO_URL"
+          python marketing/automation/prepare_sadtalker.py --size 512
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.10'
+      - name: Install compatible free CPU animation
+        run: |
+          python -m venv state/sadtalker-venv
+          state/sadtalker-venv/bin/python -m pip install 'setuptools==69.5.1' wheel
+          state/sadtalker-venv/bin/python -m pip install 'torch==1.13.1+cpu' 'torchvision==0.14.1+cpu' 'torchaudio==0.13.1+cpu' --extra-index-url https://download.pytorch.org/whl/cpu
+          state/sadtalker-venv/bin/python -m pip install -r state/SadTalker/requirements.txt -c marketing/automation/sadtalker-constraints.txt
+      - name: Test native 512 face detail and natural head movement
+        env:
+          OMP_NUM_THREADS: '4'
+          MKL_NUM_THREADS: '4'
+          OPENBLAS_NUM_THREADS: '4'
+        run: |
+          cd state/SadTalker
+          ../sadtalker-venv/bin/python inference.py --cpu --size 512 --batch_size 1 --preprocess full --source_image ../../marketing/automation/assets/fictional-presenter.png --driven_audio ../quality-preview/speech.wav --result_dir ../quality-preview/render
+      - name: Finish visual sample without changing source audio
+        env:
+          GRAPHICS_PYTHON: ${{ steps.graphics.outputs.python-path }}
+        run: |
+          SOURCE_RENDER=$(find state/quality-preview/render -maxdepth 1 -name '*.mp4' -print -quit)
+          test -n "$SOURCE_RENDER"
+          "$GRAPHICS_PYTHON" marketing/automation/ugc_style.py --source "$SOURCE_RENDER" --metadata state/quality-preview/metadata.json --output state/quality-preview/one-step-visual-quality-preview.mp4 --seconds 6
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: six-second-visual-quality-preview
+          path: state/quality-preview/one-step-visual-quality-preview.mp4
+          retention-days: 1
+          if-no-files-found: error
