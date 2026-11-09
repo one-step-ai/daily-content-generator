@@ -1,0 +1,92 @@
+name: Free lip and head movement comparison
+on:
+  workflow_dispatch:
+    inputs:
+      source_release:
+        type: string
+        required: true
+        description: Draft release containing the existing fictional presenter clip
+permissions:
+  contents: write
+jobs:
+  lip-sync:
+    if: github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.10'
+      - name: Install the free CPU lip-sync runtime
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg libgl1 libsndfile1
+          python -m pip install torch==2.2.2+cpu torchvision==0.17.2+cpu --extra-index-url https://download.pytorch.org/whl/cpu
+          python -m pip install -r marketing/automation/musetalk-cpu-requirements.txt
+          python marketing/automation/prepare_musetalk.py
+      - name: Refine mouth timing against the original voice
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RELEASE: ${{ inputs.source_release }}
+          OMP_NUM_THREADS: '4'
+          MKL_NUM_THREADS: '4'
+        run: |
+          mkdir -p state/lip-test
+          gh release download "$SOURCE_RELEASE" --pattern '*.mp4' --dir state/lip-test
+          SOURCE=$(find state/lip-test -maxdepth 1 -name '*.mp4' -print -quit)
+          test -n "$SOURCE"
+          ffmpeg -y -v error -i "$SOURCE" -vn -ar 16000 state/lip-test/voice.wav
+          python marketing/automation/lip_refine.py --source "$SOURCE" --audio state/lip-test/voice.wav --output state/lip-test/lip-sync-candidate.mp4 --seconds 3
+      - name: Save the generated lip-sync comparison
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "lip-test-$GITHUB_RUN_ID" --draft --target "$GITHUB_SHA" --title 'Fictional presenter lip-sync test' --notes 'Original voice and script preserved. Generic AI presenter only.'
+          gh release upload "lip-test-$GITHUB_RUN_ID" state/lip-test/lip-sync-candidate.mp4
+  head-motion:
+    if: github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.10'
+      - name: Prepare the unchanged speech and verified face renderer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RELEASE: ${{ inputs.source_release }}
+        run: |
+          mkdir -p state/head-test
+          gh release download "$SOURCE_RELEASE" --pattern '*.mp4' --dir state/head-test
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg libgl1 libsndfile1
+          SOURCE=$(find state/head-test -maxdepth 1 -name '*.mp4' -print -quit)
+          ffmpeg -y -v error -i "$SOURCE" -vn -ar 16000 state/head-test/voice.wav
+          python marketing/automation/prepare_sadtalker.py --size 512
+          python -m venv state/sadtalker-venv
+          state/sadtalker-venv/bin/python -m pip install 'setuptools==69.5.1' wheel
+          state/sadtalker-venv/bin/python -m pip install 'torch==1.13.1+cpu' 'torchvision==0.14.1+cpu' 'torchaudio==0.13.1+cpu' --extra-index-url https://download.pytorch.org/whl/cpu
+          state/sadtalker-venv/bin/python -m pip install -r state/SadTalker/requirements.txt -c marketing/automation/sadtalker-constraints.txt
+      - name: Render smooth speech-aware head movement
+        env:
+          OMP_NUM_THREADS: '4'
+          MKL_NUM_THREADS: '4'
+          OPENBLAS_NUM_THREADS: '4'
+        run: |
+          cd state/SadTalker
+          ../sadtalker-venv/bin/python ../../marketing/automation/head_motion.py --motion-audio ../head-test/voice.wav --cpu --size 512 --batch_size 1 --preprocess full --expression_scale 1.08 --source_image ../../marketing/automation/assets/fictional-presenter.png --driven_audio ../head-test/voice.wav --result_dir ../head-test/render
+      - name: Save the head-motion comparison
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          SOURCE=$(find state/head-test/render -maxdepth 1 -name '*.mp4' -print -quit)
+          test -n "$SOURCE"
+          cp "$SOURCE" state/head-test/head-motion-candidate.mp4
+          gh release create "head-test-$GITHUB_RUN_ID" --draft --target "$GITHUB_SHA" --title 'Fictional presenter head-motion test' --notes 'Speech-aware motion comparison. Original voice and script preserved.'
+          gh release upload "head-test-$GITHUB_RUN_ID" state/head-test/head-motion-candidate.mp4
