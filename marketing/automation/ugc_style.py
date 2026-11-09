@@ -22,10 +22,11 @@ def active_cue(cues, seconds):
     return next((i for i, c in enumerate(cues) if c['start'] <= seconds < c['end']), len(cues)-1)
 
 
-def render(source, metadata, target, seconds=None, offset=0, animate_camera=True):
+def render(source, metadata, target, seconds=None, offset=0, animate_camera=True, cover_old_layout=False):
     import arabic_reshaper
     from bidi.algorithm import get_display
     from PIL import Image, ImageDraw, ImageFont
+    from ugc_captions import caption
 
     ffmpeg = shutil.which('ffmpeg')
     if not ffmpeg:
@@ -42,7 +43,9 @@ def render(source, metadata, target, seconds=None, offset=0, animate_camera=True
         raise ValueError('No source duration remains')
     cues = data['cues']
     fonts = {s: ImageFont.truetype(str(CACHE/'sora.ttf'), s) for s in (20, 22, 25, 28, 32, 40)}
-    arfont = ImageFont.truetype(str(CACHE/'arabic.ttf'), 53)
+    # Text is explicitly shaped/reordered below. Disable RAQM to prevent Linux
+    # Pillow from shaping it a second time (Windows builds often default to BASIC).
+    arfont = ImageFont.truetype(str(CACHE/'arabic.ttf'), 53, layout_engine=ImageFont.Layout.BASIC)
     gold, ivory = (226, 188, 87, 255), (250, 249, 246, 255)
     target = Path(target); target.parent.mkdir(parents=True, exist_ok=True)
     decoder = subprocess.Popen([ffmpeg, '-v', 'error', '-ss', str(offset), '-i', str(source),
@@ -93,6 +96,8 @@ def render(source, metadata, target, seconds=None, offset=0, animate_camera=True
                 a=round(240*(y-740)/210)
                 d.line((0,y,W,y),fill=(10,15,20,a),width=1)
             d.rectangle((0,950,W,H),fill=(10,15,20,255))
+            if cover_old_layout:
+                d.rounded_rectangle((40,790,680,1150),radius=24,fill=(10,15,20,255))
             intro=ci==0;closing=len(cues)>1 and ci==len(cues)-1
             label='BUSINESS, ORGANISED' if intro else 'LET’S BUILD YOUR NEXT STEP' if closing else 'START WITH ONE WORKFLOW' if ci==len(cues)-2 else f'PRACTICAL STEP {min(ci,3):02}'
             d.text((64,815),label,font=fonts[20],fill=gold)
@@ -110,7 +115,7 @@ def render(source, metadata, target, seconds=None, offset=0, animate_camera=True
             else:
                 d.rounded_rectangle((64,908,656,968),radius=13,fill=gold)
                 centered(d,'MESSAGE ONE STEP',924,fonts[25],(12,18,22,255))
-            chunks=caption_chunks(cue['ar']);chunk=chunks[min(len(chunks)-1,int(progress*len(chunks)))]
+            chunks=caption_chunks(caption(data,cue));chunk=chunks[min(len(chunks)-1,int(progress*len(chunks)))]
             lines=[];line=''
             for word in chunk.split():
                 trial=(line+' '+word).strip()
@@ -137,4 +142,5 @@ if __name__=='__main__':
     p=argparse.ArgumentParser();p.add_argument('--source',required=True);p.add_argument('--metadata',required=True)
     p.add_argument('--output',required=True);p.add_argument('--seconds',type=float);p.add_argument('--offset',type=float,default=0)
     p.add_argument('--no-zoom',action='store_true')
-    a=p.parse_args();print(json.dumps(render(a.source,a.metadata,a.output,a.seconds,a.offset,not a.no_zoom)))
+    p.add_argument('--cover-old-layout',action='store_true')
+    a=p.parse_args();print(json.dumps(render(a.source,a.metadata,a.output,a.seconds,a.offset,not a.no_zoom,a.cover_old_layout)))

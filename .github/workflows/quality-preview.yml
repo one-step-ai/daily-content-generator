@@ -6,6 +6,10 @@ on:
         description: Existing public UGC video; original audio is preserved
         required: true
         type: string
+      native_source_release:
+        description: Optional existing six-second native render to validate graphics without rendering the face again
+        type: string
+        default: ''
 permissions:
   contents: write
 concurrency:
@@ -27,23 +31,27 @@ jobs:
       - name: Prepare free graphics and preserve original speech
         env:
           SOURCE_VIDEO_URL: ${{ inputs.source_video_url }}
+          NATIVE_SOURCE_RELEASE: ${{ inputs.native_source_release }}
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends ffmpeg libgl1 libsndfile1
           python -m pip install -r marketing/automation/requirements.txt
           python marketing/automation/bootstrap.py
           python marketing/automation/quality_preview.py "$SOURCE_VIDEO_URL"
-          python marketing/automation/prepare_sadtalker.py --size 512
+          if [ -z "$NATIVE_SOURCE_RELEASE" ]; then python marketing/automation/prepare_sadtalker.py --size 512; fi
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        if: inputs.native_source_release == ''
         with:
           python-version: '3.10'
       - name: Install compatible free CPU animation
+        if: inputs.native_source_release == ''
         run: |
           python -m venv state/sadtalker-venv
           state/sadtalker-venv/bin/python -m pip install 'setuptools==69.5.1' wheel
           state/sadtalker-venv/bin/python -m pip install 'torch==1.13.1+cpu' 'torchvision==0.14.1+cpu' 'torchaudio==0.13.1+cpu' --extra-index-url https://download.pytorch.org/whl/cpu
           state/sadtalker-venv/bin/python -m pip install -r state/SadTalker/requirements.txt -c marketing/automation/sadtalker-constraints.txt
       - name: Test native 512 face detail and natural head movement
+        if: inputs.native_source_release == ''
         env:
           OMP_NUM_THREADS: '4'
           MKL_NUM_THREADS: '4'
@@ -51,17 +59,32 @@ jobs:
         run: |
           cd state/SadTalker
           ../sadtalker-venv/bin/python inference.py --cpu --size 512 --batch_size 1 --preprocess full --source_image ../../marketing/automation/assets/fictional-presenter.png --driven_audio ../quality-preview/speech.wav --result_dir ../quality-preview/render
+      - name: Reuse the completed native render for graphics validation
+        if: inputs.native_source_release != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NATIVE_SOURCE_RELEASE: ${{ inputs.native_source_release }}
+        run: |
+          mkdir -p state/quality-preview/render
+          gh release download "$NATIVE_SOURCE_RELEASE" --pattern '*.mp4' --dir state/quality-preview/render
       - name: Finish visual sample without changing source audio
         env:
           GRAPHICS_PYTHON: ${{ steps.graphics.outputs.python-path }}
+          NATIVE_SOURCE_RELEASE: ${{ inputs.native_source_release }}
         run: |
           SOURCE_RENDER=$(find state/quality-preview/render -maxdepth 1 -name '*.mp4' -print -quit)
           test -n "$SOURCE_RENDER"
-          "$GRAPHICS_PYTHON" marketing/automation/ugc_style.py --source "$SOURCE_RENDER" --metadata state/quality-preview/metadata.json --output state/quality-preview/one-step-visual-quality-preview.mp4 --seconds 6
+          if [ -n "$NATIVE_SOURCE_RELEASE" ]; then
+            "$GRAPHICS_PYTHON" marketing/automation/ugc_style.py --source "$SOURCE_RENDER" --metadata state/quality-preview/metadata.json --output state/quality-preview/one-step-visual-quality-preview.mp4 --seconds 6 --no-zoom --cover-old-layout
+          else
+            "$GRAPHICS_PYTHON" marketing/automation/ugc_style.py --source "$SOURCE_RENDER" --metadata state/quality-preview/metadata.json --output state/quality-preview/one-step-visual-quality-preview.mp4 --seconds 6
+          fi
+          ffmpeg -v error -i state/quality-preview/one-step-visual-quality-preview.mp4 -f null -
+          ffmpeg -y -v error -ss 3 -i state/quality-preview/one-step-visual-quality-preview.mp4 -frames:v 1 state/quality-preview/preview-frame.png
       - name: Save generic quality sample without metered Actions storage
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           MEDIA_BUILD="visual-preview-$GITHUB_RUN_ID"
           gh release view "$MEDIA_BUILD" >/dev/null 2>&1 || gh release create "$MEDIA_BUILD" --draft --target "$GITHUB_SHA" --title 'Fictional presenter quality sample' --notes 'Six-second generic visual test. Original speech preserved. No CRM data or credentials.'
-          gh release upload "$MEDIA_BUILD" --clobber state/quality-preview/one-step-visual-quality-preview.mp4
+          gh release upload "$MEDIA_BUILD" --clobber state/quality-preview/one-step-visual-quality-preview.mp4 state/quality-preview/preview-frame.png
