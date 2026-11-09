@@ -40,8 +40,8 @@ def main():
     previous=None
     # Only the lower face is replaced, preserving native512 eyes, skin and head motion.
     mask=np.zeros((256,256),np.float32)
-    cv2.ellipse(mask,(128,185),(88,53),0,0,360,1,-1)
-    mask=cv2.GaussianBlur(mask,(31,31),9)[...,None]
+    cv2.ellipse(mask,(128,168),(76,33),0,0,360,1,-1)
+    mask=cv2.GaussianBlur(mask,(15,15),4)[...,None]
     silent=target.with_name(target.stem+'.silent.mp4')
     enc=subprocess.Popen(['ffmpeg','-y','-v','error','-f','rawvideo','-pix_fmt','bgr24','-s',f'{w}x{h}',
         '-r','25','-i','pipe:0','-an','-c:v','libx264','-preset','fast','-crf','18','-maxrate','1500k','-bufsize','3000k','-pix_fmt','yuv420p',str(silent)],stdin=subprocess.PIPE)
@@ -73,6 +73,7 @@ def main():
                 outer=(mask[...,0]>.05)&(mask[...,0]<.25)
                 adjustment=np.clip(crop[outer].mean(axis=0)-generated[outer].mean(axis=0),-16,16)
                 generated=np.clip(generated+adjustment,0,255)
+                generated=np.clip(generated+.45*(generated-cv2.GaussianBlur(generated,(0,0),.65)),0,255)
                 full_generated=cv2.resize(generated,(x2-x1,y2-y1),interpolation=cv2.INTER_LANCZOS4)
                 full_mask=cv2.resize(mask[...,0],(x2-x1,y2-y1))[...,None]
                 original=frame[y1:y2,x1:x2].astype(np.float32)

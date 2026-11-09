@@ -92,6 +92,7 @@ jobs:
           python-version: '3.10'
       - name: Prepare the unchanged speech and verified face renderer
         env:
+          TEST_SECONDS: ${{ inputs.seconds }}
           GH_TOKEN: ${{ github.token }}
           SOURCE_RELEASE: ${{ inputs.source_release }}
         run: |
@@ -100,7 +101,7 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends ffmpeg libgl1 libsndfile1
           SOURCE=$(find state/head-test -maxdepth 1 -name '*.mp4' -print -quit)
-          ffmpeg -y -v error -i "$SOURCE" -vn -ar 16000 state/head-test/voice.wav
+          ffmpeg -y -v error -i "$SOURCE" -t "$TEST_SECONDS" -vn -ar 16000 state/head-test/voice.wav
           python marketing/automation/prepare_sadtalker.py --size 512
           python -m venv state/sadtalker-venv
           state/sadtalker-venv/bin/python -m pip install 'setuptools==69.5.1' wheel

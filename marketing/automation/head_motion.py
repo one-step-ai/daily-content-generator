@@ -27,7 +27,12 @@ def profile(audio_path):
     energy=gaussian_filter1d(energy,2.5);energy/=max(float(np.percentile(energy,95)),1e-5)
     # Irregular timing and amplitudes avoid metronomic left/right sway.
     rng=np.random.RandomState(17);positions=[0]
-    while positions[-1]<frames-1:positions.append(min(frames-1,positions[-1]+round(rng.uniform(1.7,3.1)*25)))
+    while positions[-1]<frames-1:
+        remaining=frames-1-positions[-1]
+        if remaining<43 and len(positions)>1:
+            positions[-1]=frames-1
+            break
+        positions.append(min(frames-1,positions[-1]+round(rng.uniform(1.7,3.1)*25)))
     yaw=smooth_curve([0]+rng.uniform(-3.4,3.4,len(positions)-1).tolist(),frames,positions)
     pitch=smooth_curve([0]+rng.uniform(-.6,.6,len(positions)-1).tolist(),frames,positions)-1.8*gaussian_filter1d(np.clip(energy,0,1),4)
     pitch-=pitch[0]
