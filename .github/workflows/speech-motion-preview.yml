@@ -57,19 +57,22 @@ jobs:
           ffmpeg -y -v error -i "$SOURCE" -vn -ar 16000 state/lip-test/voice.wav
           ffmpeg -y -v error -i "$SOURCE" -an -vf 'scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280,fps=25' -c:v libx264 -preset fast -crf 18 state/lip-test/source-720.mp4
           python marketing/automation/lip_refine.py --source state/lip-test/source-720.mp4 --audio state/lip-test/voice.wav --output state/lip-test/lip-sync-candidate.mp4 --seconds "$TEST_SECONDS"
-          if [ "$FINISH_GRAPHICS" = true ]; then
-            mkdir -p state/marketing-cache
-            curl --fail --location --silent --show-error https://raw.githubusercontent.com/google/fonts/main/ofl/sora/Sora%5Bwght%5D.ttf --output state/marketing-cache/sora.ttf
-            curl --fail --location --silent --show-error https://raw.githubusercontent.com/google/fonts/main/ofl/notonaskharabic/NotoNaskhArabic%5Bwght%5D.ttf --output state/marketing-cache/arabic.ttf
-            python - <<'PY'
-            import json,os
-            from pathlib import Path
-            seconds=float(os.environ['TEST_SECONDS'])
-            Path('state/lip-test/metadata.json').write_text(json.dumps({'duration':seconds,'cues':[{'start':0,'end':seconds,'en':'Turn enquiries into useful next steps.','ar':'فكرة عملية لتنظيم استفسارات العملاء في شركتك.'}]},ensure_ascii=False),encoding='utf-8')
-            PY
-            python marketing/automation/ugc_style.py --source state/lip-test/lip-sync-candidate.mp4 --metadata state/lip-test/metadata.json --output state/lip-test/finished.mp4
-            mv state/lip-test/finished.mp4 state/lip-test/lip-sync-candidate.mp4
-          fi
+      - name: Finish preview graphics
+        if: inputs.finish_graphics
+        env:
+          TEST_SECONDS: ${{ inputs.seconds }}
+        run: |
+          mkdir -p state/marketing-cache
+          curl --fail --location --silent --show-error https://raw.githubusercontent.com/google/fonts/main/ofl/sora/Sora%5Bwght%5D.ttf --output state/marketing-cache/sora.ttf
+          curl --fail --location --silent --show-error https://raw.githubusercontent.com/google/fonts/main/ofl/notonaskharabic/NotoNaskhArabic%5Bwght%5D.ttf --output state/marketing-cache/arabic.ttf
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          seconds=float(os.environ['TEST_SECONDS'])
+          Path('state/lip-test/metadata.json').write_text(json.dumps({'duration':seconds,'cues':[{'start':0,'end':seconds,'en':'Turn enquiries into useful next steps.','ar':'فكرة عملية لتنظيم استفسارات العملاء في شركتك.'}]},ensure_ascii=False),encoding='utf-8')
+          PY
+          python marketing/automation/ugc_style.py --source state/lip-test/lip-sync-candidate.mp4 --metadata state/lip-test/metadata.json --output state/lip-test/finished.mp4
+          mv state/lip-test/finished.mp4 state/lip-test/lip-sync-candidate.mp4
       - name: Save the generated lip-sync comparison
         env:
           GH_TOKEN: ${{ github.token }}
