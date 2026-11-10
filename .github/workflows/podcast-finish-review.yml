@@ -1,0 +1,44 @@
+name: Finish existing podcast review without rerendering
+on:
+  workflow_dispatch:
+    inputs:
+      source_release:
+        type: string
+        required: true
+      day:
+        type: string
+        required: true
+permissions:
+  contents: write
+jobs:
+  assemble:
+    if: github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.12'
+      - name: Assemble saved original subshots across a day boundary
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MEDIA_BUILD: ${{ inputs.source_release }}
+          MEDIA_DAY: ${{ inputs.day }}
+        run: |
+          [[ "$MEDIA_BUILD" =~ ^owner-review-[0-9]+$ ]]
+          [[ "$MEDIA_DAY" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]
+          mkdir -p state/daily-marketing state/ugc-clips state/marketing-cache
+          gh release download "$MEDIA_BUILD" --pattern '*.wav' --pattern '*.json' --dir state/daily-marketing
+          gh release download "$MEDIA_BUILD" --pattern 'clip-*.mp4' --dir state/ugc-clips
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg
+          python -m pip install Pillow==11.3.0 arabic-reshaper==3.1.0 python-bidi==0.6.12 imageio-ffmpeg==0.4.9
+          curl --fail --location --silent --show-error https://raw.githubusercontent.com/google/fonts/main/ofl/sora/Sora%5Bwght%5D.ttf --output state/marketing-cache/sora.ttf
+          curl --fail --location --silent --show-error https://raw.githubusercontent.com/google/fonts/main/ofl/notonaskharabic/NotoNaskhArabic%5Bwght%5D.ttf --output state/marketing-cache/arabic.ttf
+          python marketing/automation/ugc_chunks.py assemble --day "$MEDIA_DAY" --subshots
+          python marketing/automation/ugc_render.py --sadtalker state/SadTalker --finish-only --render-only
+          ffmpeg -v error -i "state/daily-marketing/$MEDIA_DAY-ugc.mp4" -f null -
+          gh release upload "$MEDIA_BUILD" --clobber "state/daily-marketing/$MEDIA_DAY-ugc.mp4"
