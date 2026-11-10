@@ -2,6 +2,7 @@
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 import json
+import hashlib
 
 ROOT=Path(__file__).resolve().parents[2]
 
@@ -27,7 +28,11 @@ def main():
         title=custom['title'];parts=[(c['en'],c['ar']) for c in custom['cues']]
         if any(not en.strip() or not ar.strip() for en,ar in parts):raise ValueError('Complete English and Arabic required')
     out=Path(args.output_dir) if args.output_dir else ROOT/'state/daily-marketing';out.mkdir(parents=True,exist_ok=True)
-    if (out/(day+'-ugc.wav')).exists() and (out/(day+'-ugc.json')).exists():return
+    script_hash=hashlib.sha256(Path(args.script).read_bytes()).hexdigest() if args.script else None
+    if (out/(day+'-ugc.wav')).exists() and (out/(day+'-ugc.json')).exists():
+        if custom and json.loads((out/(day+'-ugc.json')).read_text(encoding='utf-8')).get('script_sha256')!=script_hash:
+            raise ValueError('A different script already exists here; choose a fresh review output directory')
+        return
     cache=ROOT/'state/marketing-cache'
     model=Kokoro(str(cache/'kokoro-v1.0.int8.onnx'),str(cache/'voices-v1.0.bin'))
     audio=[];cues=[];clock=0.0
@@ -37,7 +42,7 @@ def main():
         end=clock+len(samples)/rate;cues.append({'start':clock,'end':end,'en':words,'ar':ar});clock=end;audio.append(samples)
     if clock<30 or clock>90:raise RuntimeError('UGC speech must be between 30 and 90 seconds')
     sf.write(out/(day+'-ugc.wav'),np.concatenate(audio),rate)
-    (out/(day+'-ugc.json')).write_text(json.dumps({'day':day,'duration':clock,'title':title,'cues':cues,'fictional_ai_presenter':True,'verbatim_arabic':custom is not None},ensure_ascii=False),encoding='utf-8')
+    (out/(day+'-ugc.json')).write_text(json.dumps({'day':day,'duration':clock,'title':title,'cues':cues,'fictional_ai_presenter':True,'verbatim_arabic':custom is not None,'script_sha256':script_hash},ensure_ascii=False),encoding='utf-8')
     print(json.dumps({'day':day,'ugc_speech_seconds':clock}))
 
 if __name__=='__main__':main()
