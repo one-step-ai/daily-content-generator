@@ -12,7 +12,7 @@ ROOT=Path(__file__).resolve().parents[2]
 
 def main():
     p=argparse.ArgumentParser();p.add_argument('--source',required=True);p.add_argument('--audio',required=True)
-    p.add_argument('--output',required=True);p.add_argument('--seconds',type=float)
+    p.add_argument('--output',required=True);p.add_argument('--seconds',type=float);p.add_argument('--landmark-crop',action='store_true')
     a=p.parse_args()
     import cv2
     import numpy as np
@@ -40,7 +40,7 @@ def main():
     previous=None
     # Only the lower face is replaced, preserving native512 eyes, skin and head motion.
     mask=np.zeros((256,256),np.float32)
-    cv2.ellipse(mask,(128,168),(76,33),0,0,360,1,-1)
+    cv2.ellipse(mask,(128,185) if a.landmark_crop else (128,168),(70,30) if a.landmark_crop else (76,33),0,0,360,1,-1)
     mask=cv2.GaussianBlur(mask,(15,15),4)[...,None]
     silent=target.with_name(target.stem+'.silent.mp4')
     enc=subprocess.Popen(['ffmpeg','-y','-v','error','-f','rawvideo','-pix_fmt','bgr24','-s',f'{w}x{h}',
@@ -58,7 +58,7 @@ def main():
                         x,y,fw,fh=max(faces,key=lambda b:b[2]*b[3])
                         # Put the mid-crop masking boundary at the nose, matching
                         # MuseTalk's landmark-based training crop for this presenter.
-                        box=np.array([x+.06*fw,y+.20*fh,x+.94*fw,y+1.08*fh],dtype=float)
+                        box=np.array([x+.17*fw,y+.062*fh,x+.855*fw,y+1.002*fh] if a.landmark_crop else [x+.06*fw,y+.20*fh,x+.94*fw,y+1.08*fh],dtype=float)
                         previous=box if previous is None else .22*box+.78*previous
                     elif previous is None:raise RuntimeError('No reliable frontal face detected')
                 x1,y1,x2,y2=np.rint(previous).astype(int)

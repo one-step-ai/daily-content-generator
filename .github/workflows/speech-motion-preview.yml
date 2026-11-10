@@ -15,6 +15,10 @@ on:
         type: number
         default: 3
         description: Length of the lip-sync comparison
+      landmark_crop:
+        type: boolean
+        default: false
+        description: Use the approved presenter reference 68-point crop ratios
       finish_graphics:
         type: boolean
         default: false
@@ -49,6 +53,7 @@ jobs:
           MKL_NUM_THREADS: '4'
           TEST_SECONDS: ${{ inputs.seconds }}
           FINISH_GRAPHICS: ${{ inputs.finish_graphics }}
+          LANDMARK_CROP: ${{ inputs.landmark_crop }}
         run: |
           mkdir -p state/lip-test
           gh release download "$SOURCE_RELEASE" --pattern '*.mp4' --dir state/lip-test
@@ -56,7 +61,9 @@ jobs:
           test -n "$SOURCE"
           ffmpeg -y -v error -i "$SOURCE" -vn -ar 16000 state/lip-test/voice.wav
           ffmpeg -y -v error -i "$SOURCE" -an -vf 'scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280,fps=25' -c:v libx264 -preset fast -crf 18 state/lip-test/source-720.mp4
-          python marketing/automation/lip_refine.py --source state/lip-test/source-720.mp4 --audio state/lip-test/voice.wav --output state/lip-test/lip-sync-candidate.mp4 --seconds "$TEST_SECONDS"
+          CROP_ARGS=()
+          if [ "$LANDMARK_CROP" = true ]; then CROP_ARGS=(--landmark-crop); fi
+          python marketing/automation/lip_refine.py --source state/lip-test/source-720.mp4 --audio state/lip-test/voice.wav --output state/lip-test/lip-sync-candidate.mp4 --seconds "$TEST_SECONDS" "${CROP_ARGS[@]}"
       - name: Finish preview graphics
         if: inputs.finish_graphics
         env:
