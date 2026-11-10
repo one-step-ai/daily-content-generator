@@ -54,9 +54,10 @@ jobs:
       contents: write
     strategy:
       fail-fast: false
-      max-parallel: 6
+      max-parallel: 12
       matrix:
         clip: [0, 1, 2, 3, 4, 5]
+        half: [0, 1]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -85,13 +86,17 @@ jobs:
           OPENBLAS_NUM_THREADS: '4'
           MEDIA_DAY: ${{ needs.ugc-prepare.outputs.day }}
           CLIP_INDEX: ${{ matrix.clip }}
-        run: state/sadtalker-venv/bin/python marketing/automation/ugc_chunks.py render --day "$MEDIA_DAY" --index "$CLIP_INDEX" --enhanced-motion
+          SUBSHOT: ${{ matrix.half }}
+        run: state/sadtalker-venv/bin/python marketing/automation/ugc_chunks.py render --day "$MEDIA_DAY" --index "$CLIP_INDEX" --enhanced-motion --half "$SUBSHOT"
       - name: Store this generated shot
         env:
           GH_TOKEN: ${{ github.token }}
           MEDIA_BUILD: ${{ needs.ugc-prepare.outputs.build }}
           CLIP_INDEX: ${{ matrix.clip }}
-        run: gh release upload "$MEDIA_BUILD" --clobber "state/ugc-clips/clip-$CLIP_INDEX.mp4"
+          SUBSHOT: ${{ matrix.half }}
+        run: |
+          cp "state/ugc-clips/clip-$CLIP_INDEX.mp4" "state/ugc-clips/clip-$CLIP_INDEX-$SUBSHOT.mp4"
+          gh release upload "$MEDIA_BUILD" --clobber "state/ugc-clips/clip-$CLIP_INDEX-$SUBSHOT.mp4"
   ugc-publish:
     needs: [ugc-prepare, ugc-render]
     if: needs.ugc-render.result == 'success'
@@ -119,7 +124,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends ffmpeg libsndfile1
           python -m pip install -r marketing/automation/requirements.txt
           python marketing/automation/bootstrap.py
-          python marketing/automation/ugc_chunks.py assemble --day "$MEDIA_DAY"
+          python marketing/automation/ugc_chunks.py assemble --day "$MEDIA_DAY" --subshots
       - name: Validate and save the finished review video without posting
         env:
           GH_TOKEN: ${{ github.token }}

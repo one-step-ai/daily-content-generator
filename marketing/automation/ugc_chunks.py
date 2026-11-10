@@ -31,8 +31,12 @@ def normalize(source,target,cue,trim_start=0):
         '-frames:v',str(frames),'-c:v','libx264','-preset','fast','-crf','18','-pix_fmt','yuv420p',str(target)],check=True)
 
 
-def render_chunk(day,index,enhanced_motion=False,lip_python=None):
-    _,data=metadata(day);cue=data['cues'][index]
+def render_chunk(day,index,enhanced_motion=False,lip_python=None,half=None):
+    _,data=metadata(day);cue=dict(data['cues'][index])
+    if half is not None:
+        middle=((round(cue['start']*25)+round(cue['end']*25))//2)/25
+        if half==0:cue['end']=middle
+        else:cue['start']=middle
     work=ROOT/'state/ugc-clips';work.mkdir(parents=True,exist_ok=True)
     wav=work/f'clip-{index}.wav'
     first=round(cue['start']*25);last=round(cue['end']*25)
@@ -64,8 +68,8 @@ def render_chunk(day,index,enhanced_motion=False,lip_python=None):
     (work/f'clip-{index}-quality.json').write_text(json.dumps({'enhanced_motion':enhanced_motion,'dedicated_lip_sync':refined,'context_frames':context}),encoding='utf-8')
 
 
-def assemble(day):
-    meta,data=metadata(day);work=ROOT/'state/ugc-clips';clips=[work/f'clip-{i}.mp4' for i in range(6)]
+def assemble(day,subshots=False):
+    meta,data=metadata(day);work=ROOT/'state/ugc-clips';clips=([work/f'clip-{i}-{half}.mp4' for i in range(6) for half in range(2)] if subshots else [work/f'clip-{i}.mp4' for i in range(6)])
     if not all(p.is_file() and p.stat().st_size>1000 for p in clips):raise ValueError('All six rendered shots are required')
     concat=work/'shots.txt'
     concat.write_text(''.join("file '"+p.name+"'\n" for p in clips),encoding='utf-8')
@@ -80,9 +84,9 @@ def assemble(day):
 
 if __name__=='__main__':
     p=argparse.ArgumentParser();p.add_argument('mode',choices=('render','assemble'));p.add_argument('--day',default=datetime.now(timezone(timedelta(hours=4))).date().isoformat());p.add_argument('--index',type=int,choices=range(6))
-    p.add_argument('--enhanced-motion',action='store_true');p.add_argument('--lip-python')
+    p.add_argument('--enhanced-motion',action='store_true');p.add_argument('--lip-python');p.add_argument('--half',type=int,choices=(0,1));p.add_argument('--subshots',action='store_true')
     a=p.parse_args()
     if a.mode=='render':
         if a.index is None:p.error('--index is required for a render')
-        render_chunk(a.day,a.index,a.enhanced_motion,a.lip_python)
-    else:assemble(a.day)
+        render_chunk(a.day,a.index,a.enhanced_motion,a.lip_python,a.half)
+    else:assemble(a.day,a.subshots)
