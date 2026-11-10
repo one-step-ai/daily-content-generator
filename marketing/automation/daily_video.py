@@ -71,7 +71,7 @@ def setup():
     print(json.dumps({'sha256': hashlib.sha256(key).hexdigest()}))
 
 
-def render(day, *, target=None):
+def render_legacy(day, *, target=None):
     import numpy as np
     from PIL import Image, ImageDraw, ImageFont
     import soundfile as sf
@@ -174,24 +174,73 @@ def render(day, *, target=None):
     return target
 
 
-def upload(path,day):
-    receipt=OUT/(day+'.uploaded.json')
+def render(day, *, target=None, variant=0):
+    """The owner's approved black/gold cartoon style is the daily default."""
+    import numpy as np
+    import soundfile as sf
+    from kokoro_onnx import Kokoro
+    from ugc_captions import TITLES
+    from tutorial_video import render as tutorial_render
+    OUT.mkdir(parents=True, exist_ok=True)
+    if variant not in (0,1):raise ValueError('Two daily video variants only')
+    stem=day+('-second' if variant else '')
+    target = Path(target) if target else OUT/(stem+'.mp4')
+    if target.exists() and target.stat().st_size > 10000:
+        return target
+    n = (datetime.fromisoformat(day)-datetime(1970, 1, 1)).days+variant*7
+    title, steps, arabic = TIPS[n % len(TIPS)]
+    parts = [
+        ('Here is a practical business tip from One Step. '+title+'.',
+         'إليك نصيحة عملية لأعمالك من ون ستيب. '+TITLES[title]),
+        *[(step+' Keep it simple enough that your team can use it consistently.',
+           ar+' حافظ على بساطة هذه الخطوة ليسهل على فريقك تطبيقها باستمرار.')
+          for step, ar in zip(steps, arabic)],
+        ('Start with one workflow, test it with a real enquiry, and check the result before you expand it.',
+         'ابدأ بمسار عمل واحد، واختبره باستفسار حقيقي، ثم تحقّق من النتيجة قبل توسيعه.'),
+        ('One Step builds websites, CRM systems and enquiry automations. Message us to discuss how your business process could be organised.',
+         'تطوّر ون ستيب المواقع الإلكترونية وأنظمة إدارة علاقات العملاء وأتمتة الاستفسارات. راسلنا لمناقشة كيفية تنظيم إجراءات العمل في شركتك.')]
+    model = Kokoro(str(CACHE/'kokoro-v1.0.int8.onnx'), str(CACHE/'voices-v1.0.bin'))
+    chunks, cues, clock = [], [], 0.
+    for english, ar in parts:
+        samples, rate = model.create(english, voice='am_michael', speed=.9, lang='en-us')
+        samples = np.concatenate([samples, np.zeros(round(rate*.3), dtype=np.float32)])
+        end = clock+len(samples)/rate
+        cues.append({'start': clock, 'end': end, 'en': english, 'ar': ar})
+        chunks.append(samples)
+        clock = end
+    if clock < 30:
+        chunks.append(np.zeros(round((30-clock)*rate), dtype=np.float32))
+        clock = 30.
+        cues[-1]['end'] = clock
+    if clock > 90:
+        raise RuntimeError('Daily cartoon narration exceeds the reviewed reel bound')
+    wav, meta = OUT/(stem+'.wav'), OUT/(stem+'.json')
+    sf.write(wav, np.concatenate(chunks), rate)
+    meta.write_text(json.dumps({'day': day, 'title': title, 'steps': steps,
+        'daily_tutorial': True, 'duration': clock, 'cues': cues,
+        'format': 'black-gold-cartoon-screen-tutorial', 'ugc': False}, ensure_ascii=False), encoding='utf-8')
+    tutorial_render(meta, wav, target)
+    return target
+
+
+def upload(path,day,kind="business"):
+    receipt=OUT/(day+('' if kind=='business' else '-'+kind)+'.uploaded.json')
     if receipt.exists():return json.loads(receipt.read_text())
     key=os.environ.get('MARKETING_UPLOAD_KEY') or protect(CONFIG.read_bytes(),True).decode()
-    req=urllib.request.Request(API,data=path.read_bytes(),method='POST',headers={'Content-Type':'video/mp4','x-marketing-upload-key':key})
+    req=urllib.request.Request(API+('' if kind=='business' else '&kind='+kind),data=path.read_bytes(),method='POST',headers={'Content-Type':'video/mp4','x-marketing-upload-key':key})
     with urllib.request.urlopen(req,timeout=90) as response:
         result=json.load(response)
     receipt.write_text(json.dumps(result),encoding='utf-8');return result
 
 
-def already_uploaded(day):
+def already_uploaded(day,kind="business"):
     key=os.environ.get('MARKETING_UPLOAD_KEY') or protect(CONFIG.read_bytes(),True).decode()
     req=urllib.request.Request(API.replace('mode=upload-video','mode=video-status'),data=b'{}',method='POST',headers={'Content-Type':'application/json','x-marketing-upload-key':key})
     try:
         with urllib.request.urlopen(req,timeout=20) as response:result=json.load(response)
-        if result.get('day')==day and result.get('businessReady') is True:
+        if result.get('day')==day and result.get({'business':'businessReady','ugc':'ugcReady','story':'storyReady'}[kind]) is True:
             OUT.mkdir(parents=True,exist_ok=True)
-            (OUT/(day+'.uploaded.json')).write_text(json.dumps({'day':day,'source':'existing-cloud-media'}),encoding='utf-8')
+            (OUT/(day+('' if kind=='business' else '-'+kind)+'.uploaded.json')).write_text(json.dumps({'day':day,'source':'existing-cloud-media'}),encoding='utf-8')
             return True
     except Exception:
         pass # Rendering remains the free fallback; upload admission is still day-idempotent.
@@ -199,15 +248,22 @@ def already_uploaded(day):
 
 
 def main():
-    parser=argparse.ArgumentParser();parser.add_argument('--setup',action='store_true');parser.add_argument('--render-only',action='store_true')
+    parser=argparse.ArgumentParser();parser.add_argument('--setup',action='store_true');parser.add_argument('--render-only',action='store_true');parser.add_argument('--variant',type=int,choices=(0,1),default=0)
     args=parser.parse_args()
     if args.setup:setup();return
     day=datetime.now(timezone(timedelta(hours=4))).date().isoformat()
-    if not args.render_only and already_uploaded(day):
-        print(json.dumps({'day':day,'uploaded':True,'reused_cloud_media':True}));return
-    path=render(day)
-    if not args.render_only:upload(path,day)
-    print(json.dumps({'day':day,'rendered':True,'uploaded':not args.render_only}))
+    kind='ugc' if args.variant else 'business'
+    ready=not args.render_only and already_uploaded(day,kind)
+    story_ready=args.variant==1 or (not args.render_only and already_uploaded(day,'story'))
+    if ready and story_ready:
+        print(json.dumps({'day':day,'variant':args.variant,'reused_cloud_media':True}));return
+    path=render(day,variant=args.variant)
+    if not args.render_only and not ready:upload(path,day,kind)
+    if args.variant==0 and not story_ready:
+        from story_video import create
+        story=create(path,OUT/(day+'.json'),OUT/(day+'-story.mp4'))
+        if not args.render_only:upload(story,day,'story')
+    print(json.dumps({'day':day,'variant':args.variant,'rendered':True,'uploaded':not args.render_only}))
 
 
 if __name__=='__main__':main()

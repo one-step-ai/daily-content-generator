@@ -9,7 +9,7 @@ def main():
     if not key or not url:raise RuntimeError('Scoped media configuration missing')
     req=urllib.request.Request(url.replace('mode=upload-video','mode=video-status'),data=b'{}',method='POST',headers={'Content-Type':'application/json','x-marketing-upload-key':key})
     with urllib.request.urlopen(req,timeout=30) as response:data=json.load(response)
-    ready={name:data.get(name+'Ready') is True for name in ('business','ugc')}
+    ready={name:data.get(name+'Ready') is True for name in ('business','ugc','story')}
     output=os.environ.get('GITHUB_OUTPUT')
     if output:
         with Path(output).open('a',encoding='utf-8') as f:

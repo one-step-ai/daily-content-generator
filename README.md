@@ -1,3 +1,7 @@
+# Current daily default: approved black-and-gold cartoon tutorial
+
+From11November2026Dubai: two distinct cartoon screen-tutorial videos, one matching short video story and five distinct feed posts per platform/day. The original cartoon instructor speaks and points while the screen types/highlights the reviewed instructions. Both videos use this approved style; the former photoreal SadTalker daily path has been replaced. English narration has full natural Arabic captions. Scheduled creation is free standard-public-runner CPU rendering, with no paid image/video API. The sections below retain prior build history; they are not the current daily design.
+
 # Standalone cloud renderer
 
 This package contains only the generic media renderer, brand styling, the fictional generated presenter, and dependency/bootstrap instructions. It contains no CRM code, customer records or credentials.
@@ -34,3 +38,10 @@ Draft media releases now target the current default branch so a scoped Actions t
 ## Approved Arabic standard
 
 On10November the owner approved the corrected Arabic preview and requested this approach permanently. Translate the entire spoken meaning in natural Modern Standard Arabic, including every instruction and CTA, without adding claims. Preserve the chosen English script/voice. Shape Arabic once, use BASIC font layout with explicit bidi/reshaping, measure shaped line widths, and split captions into readable timed phrases inside safe margins. Custom scripts must provide a complete Arabic translation for every English section; `verbatim_arabic` prevents generic caption text replacing reviewed custom wording. Preview/replacement publication waits for the owner when requested.
+
+
+## Owner-approved design and daily volume,10November
+
+The owner approved the full53second black-background, warm-gold cartoon screen tutorial as perfect and instructed immediate publication. This is the regular business-video design default: original cartoon instructor at the bottom, speaking/pointing while the screen shows typing, cursor actions, highlighted fields and clear step headings. Preserve complete natural Arabic captions. No ivory/white dominant background; no return to rejected photoreal UGC.
+
+Standing rule effective11NovemberDubai: TWO distinct cartoon tutorial videos, ONE video story and FIVE distinct feed posts on each of Facebook and Instagram per day. Feed times09:00,12:00,15:00,18:00,21:00; videos13:00 and19:00; story17:00Dubai. Existing per-day/slot claims, no unknown-outcome retry, saved Instagram containers and bounded free storage remain. Today the owner explicitly requested the extra approved video and matching video story after earlier legacy slots had already published.
