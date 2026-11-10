@@ -8,7 +8,7 @@ ROOT=Path(__file__).resolve().parents[2]
 
 def main():
     import argparse
-    parser=argparse.ArgumentParser();parser.add_argument("--script");parser.add_argument("--output-dir");args=parser.parse_args()
+    parser=argparse.ArgumentParser();parser.add_argument("--script");parser.add_argument("--podcast",action="store_true");parser.add_argument("--output-dir");args=parser.parse_args()
     import numpy as np
     import soundfile as sf
     from kokoro_onnx import Kokoro
@@ -22,13 +22,14 @@ def main():
       ('Start with one workflow and check it with a real enquiry before expanding it. The process should match how your team actually works.','ابدأ بعملية واحدة واختبرها قبل توسيع الأتمتة.'),
       ('At One Step, we build websites, CRM systems and enquiry automations. Message One Step to discuss a practical place to start for your business.','ون ستيب تطور المواقع وأنظمة إدارة العملاء وأتمتة الاستفسارات. راسلنا لمناقشة احتياجات شركتك.')]
     custom=None
-    if args.script:
-        custom=json.loads(Path(args.script).read_text(encoding='utf-8'))
+    if args.script or args.podcast:
+        from podcast_scripts import script as podcast_script
+        custom=json.loads(Path(args.script).read_text(encoding='utf-8')) if args.script else podcast_script(day)
         if custom.get('fictional_ai_presenter') is not True or len(custom.get('cues',[]))!=6:raise ValueError('Six bilingual fictional-presenter sections required')
         title=custom['title'];parts=[(c['en'],c['ar']) for c in custom['cues']]
         if any(not en.strip() or not ar.strip() for en,ar in parts):raise ValueError('Complete English and Arabic required')
     out=Path(args.output_dir) if args.output_dir else ROOT/'state/daily-marketing';out.mkdir(parents=True,exist_ok=True)
-    script_hash=hashlib.sha256(Path(args.script).read_bytes()).hexdigest() if args.script else None
+    script_hash=hashlib.sha256(json.dumps(custom,ensure_ascii=False,sort_keys=True).encode('utf-8')).hexdigest() if custom else None
     if (out/(day+'-ugc.wav')).exists() and (out/(day+'-ugc.json')).exists():
         if custom and json.loads((out/(day+'-ugc.json')).read_text(encoding='utf-8')).get('script_sha256')!=script_hash:
             raise ValueError('A different script already exists here; choose a fresh review output directory')

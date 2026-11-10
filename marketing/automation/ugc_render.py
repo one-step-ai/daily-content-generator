@@ -12,7 +12,7 @@ ROOT=Path(__file__).resolve().parents[2]
 
 def main():
     p=argparse.ArgumentParser();p.add_argument('--sadtalker',required=True);p.add_argument('--finish-only',action='store_true');p.add_argument('--render-only',action='store_true');p.add_argument('--size',type=int,choices=(256,512),default=512);a=p.parse_args()
-    day=datetime.now(timezone(timedelta(hours=4))).date().isoformat()
+    day=os.environ.get('MEDIA_DAY') or datetime.now(timezone(timedelta(hours=4))).date().isoformat()
     out=ROOT/'state/daily-marketing';data=json.loads((out/(day+'-ugc.json')).read_text(encoding='utf-8'))
     target=out/(day+'-ugc.mp4');receipt=out/(day+'-ugc.uploaded.json')
     if receipt.exists():return
