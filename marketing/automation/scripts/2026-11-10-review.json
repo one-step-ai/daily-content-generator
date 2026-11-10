@@ -1,0 +1,30 @@
+{
+  "title": "Stop losing the next follow-up",
+  "fictional_ai_presenter": true,
+  "cues": [
+    {
+      "en": "A customer sends an enquiry. Someone replies. Then nothing happens. The missing piece is often a clear next step.",
+      "ar": "يرسل عميل استفسارًا، فيردّ عليه أحد أفراد الفريق، ثم تتوقف المتابعة. وغالبًا ما تكون الحلقة المفقودة هي تحديد الخطوة التالية بوضوح."
+    },
+    {
+      "en": "Start with one shared record. Save what the customer needs, where the enquiry came from, and the latest conversation.",
+      "ar": "ابدأ بسجلّ مشترك واحد. احفظ احتياج العميل، ومصدر الاستفسار، وأحدث محادثة معه."
+    },
+    {
+      "en": "Next, give one person responsibility. Add a specific follow-up task and a realistic due date.",
+      "ar": "ثم كلّف شخصًا واحدًا بالمسؤولية. أضف مهمة متابعة محدّدة، وموعدًا واقعيًا لإنجازها."
+    },
+    {
+      "en": "Use reminders for routine work. When a customer replies, update the record so the team can see what happens next.",
+      "ar": "استخدم التذكيرات للمهام المتكرّرة. وعندما يردّ العميل، حدّث السجلّ ليعرف الفريق الخطوة التالية."
+    },
+    {
+      "en": "Test this with one real enquiry before automating more. A useful system should make the next action easier to find.",
+      "ar": "اختبر هذه الطريقة باستفسار حقيقي واحد قبل توسيع الأتمتة. فالنظام المفيد يجعل معرفة الإجراء التالي أسهل."
+    },
+    {
+      "en": "At One Step, we build websites, CRM systems, and enquiry automations. Message us to discuss a practical starting point for your business.",
+      "ar": "في ون ستيب، نطوّر المواقع الإلكترونية، وأنظمة إدارة علاقات العملاء، وأتمتة الاستفسارات. راسلنا لمناقشة نقطة انطلاق عملية تناسب شركتك."
+    }
+  ]
+}

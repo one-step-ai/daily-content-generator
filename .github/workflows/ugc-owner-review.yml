@@ -1,0 +1,130 @@
+name: Owner review - new fictional presenter script
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  ugc-prepare:
+    if: github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    outputs:
+      day: ${{ steps.plan.outputs.day }}
+      build: ${{ steps.plan.outputs.build }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.12'
+      - name: Plan isolated review files
+        id: plan
+        run: |
+          python - <<'PY'
+          from datetime import datetime,timezone,timedelta
+          import os
+          day=datetime.now(timezone(timedelta(hours=4))).date().isoformat()
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f:
+              f.write('day='+day+'\n'+'build=owner-review-'+os.environ['GITHUB_RUN_ID']+'\n')
+          PY
+      - name: Render the new script with the existing voice
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg espeak-ng libsndfile1
+          python -m pip install -r marketing/automation/requirements.txt
+          python marketing/automation/bootstrap.py
+          python marketing/automation/ugc_voice.py --script marketing/automation/scripts/2026-11-10-review.json
+      - name: Save generic review inputs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MEDIA_BUILD: ${{ steps.plan.outputs.build }}
+          MEDIA_DAY: ${{ steps.plan.outputs.day }}
+        run: |
+          gh release create "$MEDIA_BUILD" --draft --target main --title 'New script UGC - owner review only' --notes 'Fictional presenter. No posting or media upload credentials in this workflow.'
+          gh release upload "$MEDIA_BUILD" "state/daily-marketing/$MEDIA_DAY-ugc.wav" "state/daily-marketing/$MEDIA_DAY-ugc.json"
+  ugc-render:
+    needs: ugc-prepare
+    if: github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        clip: [0, 1, 2, 3, 4, 5]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.10'
+      - name: Fetch generic speech and verified animation source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MEDIA_BUILD: ${{ needs.ugc-prepare.outputs.build }}
+        run: |
+          mkdir -p state/daily-marketing
+          gh release download "$MEDIA_BUILD" --pattern '*.wav' --pattern '*.json' --dir state/daily-marketing
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg libgl1 libsndfile1
+          python marketing/automation/prepare_sadtalker.py --size 512
+          python -m venv state/sadtalker-venv
+          state/sadtalker-venv/bin/python -m pip install 'setuptools==69.5.1' wheel
+          state/sadtalker-venv/bin/python -m pip install 'torch==1.13.1+cpu' 'torchvision==0.14.1+cpu' 'torchaudio==0.13.1+cpu' --extra-index-url https://download.pytorch.org/whl/cpu
+          state/sadtalker-venv/bin/python -m pip install -r state/SadTalker/requirements.txt -c marketing/automation/sadtalker-constraints.txt
+      - name: Render detailed presenter shot with natural head movement
+        env:
+          OMP_NUM_THREADS: '4'
+          MKL_NUM_THREADS: '4'
+          OPENBLAS_NUM_THREADS: '4'
+          MEDIA_DAY: ${{ needs.ugc-prepare.outputs.day }}
+          CLIP_INDEX: ${{ matrix.clip }}
+        run: state/sadtalker-venv/bin/python marketing/automation/ugc_chunks.py render --day "$MEDIA_DAY" --index "$CLIP_INDEX" --enhanced-motion
+      - name: Store this generated shot
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MEDIA_BUILD: ${{ needs.ugc-prepare.outputs.build }}
+          CLIP_INDEX: ${{ matrix.clip }}
+        run: gh release upload "$MEDIA_BUILD" --clobber "state/ugc-clips/clip-$CLIP_INDEX.mp4"
+  ugc-publish:
+    needs: [ugc-prepare, ugc-render]
+    if: needs.ugc-render.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.12'
+      - name: Assemble all six shots with the original uncut speech
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MEDIA_BUILD: ${{ needs.ugc-prepare.outputs.build }}
+          MEDIA_DAY: ${{ needs.ugc-prepare.outputs.day }}
+        run: |
+          mkdir -p state/daily-marketing state/ugc-clips
+          gh release download "$MEDIA_BUILD" --pattern '*.wav' --pattern '*.json' --dir state/daily-marketing
+          gh release download "$MEDIA_BUILD" --pattern 'clip-*.mp4' --dir state/ugc-clips
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg libsndfile1
+          python -m pip install -r marketing/automation/requirements.txt
+          python marketing/automation/bootstrap.py
+          python marketing/automation/ugc_chunks.py assemble --day "$MEDIA_DAY"
+      - name: Validate and save the finished review video without posting
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MEDIA_BUILD: ${{ needs.ugc-prepare.outputs.build }}
+          MEDIA_DAY: ${{ needs.ugc-prepare.outputs.day }}
+        run: |
+          python marketing/automation/ugc_render.py --sadtalker state/SadTalker --finish-only --render-only
+          gh release upload "$MEDIA_BUILD" --clobber "state/daily-marketing/$MEDIA_DAY-ugc.mp4"

@@ -19,6 +19,7 @@ TITLES={
 
 
 def caption(data,cue):
+    if data.get('verbatim_arabic'):return cue['ar']
     english=cue['en']
     if english.startswith('Here is a practical idea for organising your business enquiries.'):
         return 'إليك فكرة عملية لتنظيم استفسارات العملاء في شركتك. '+TITLES.get(data.get('title'),cue['ar'])

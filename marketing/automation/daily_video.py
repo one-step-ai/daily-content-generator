@@ -26,21 +26,21 @@ API = os.environ.get('MARKETING_UPLOAD_URL','https://dvqssvbkpnklnzzsdcjj.supaba
 
 # Each item is reviewed instructional content, not a claim about a prospect or client result.
 TIPS = [
- ('Give every lead a next action', ['Capture the enquiry in one place.', 'Assign one person to own the next step.', 'Write the follow-up task and its due date.'], ['اجمع استفسارات العملاء في مكان واحد.', 'حدد المسؤول عن الخطوة التالية.', 'سجل مهمة المتابعة وموعدها.']),
- ('Make your contact page work harder', ['State the services your business offers.', 'Give visitors one clear way to contact you.', 'Send each enquiry into a trackable workflow.'], ['وضح الخدمات التي تقدمها شركتك.', 'اجعل التواصل معك سهلاً وواضحاً.', 'اربط كل استفسار بعملية متابعة منظمة.']),
- ('Stop relying on memory for follow-ups', ['Record what the customer asked for.', 'Choose the next useful action.', 'Set a reminder with a named owner.'], ['سجل ما يطلبه العميل.', 'حدد الخطوة التالية المناسبة.', 'أضف تذكيراً وحدد المسؤول.']),
- ('Clean your pipeline before automating', ['Define what each sales stage means.', 'Keep the latest conversation with the lead.', 'Move the record when a real event happens.'], ['حدد معنى كل مرحلة في المبيعات.', 'احتفظ بآخر محادثة مع العميل.', 'حدث المرحلة بناءً على تقدم حقيقي.']),
- ('Build a clearer team handoff', ['Pass the customer context with the task.', 'Name the receiving owner.', 'Confirm that the next step was accepted.'], ['انقل تفاصيل العميل مع المهمة.', 'حدد الشخص الذي يستلم المتابعة.', 'تأكد من استلام الخطوة التالية.']),
- ('Automate one repeated task first', ['Choose a task your team repeats often.', 'Write its trigger and decision rules.', 'Test the result before expanding the workflow.'], ['اختر مهمة متكررة في عملك.', 'حدد متى تبدأ وقواعد تنفيذها.', 'اختبر النتيجة قبل توسيع الأتمتة.']),
- ('Turn a reply into a useful next step', ['Save the conversation to the lead record.', 'Identify what the person actually needs.', 'Assign the next action to the right person.'], ['احفظ المحادثة في سجل العميل.', 'حدد ما يحتاجه العميل فعلاً.', 'وجه الخطوة التالية للشخص المناسب.']),
+ ('Give every lead a next action', ['Capture the enquiry in one place.', 'Assign one person to own the next step.', 'Write the follow-up task and its due date.'], ['سجّل الاستفسار في مكان واحد.', 'كلّف شخصًا واحدًا بالمسؤولية عن الخطوة التالية.', 'دوّن مهمة المتابعة وموعد إنجازها.']),
+ ('Make your contact page work harder', ['State the services your business offers.', 'Give visitors one clear way to contact you.', 'Send each enquiry into a trackable workflow.'], ['وضح الخدمات التي تقدمها شركتك.', 'وفّر للزوار وسيلة واحدة واضحة للتواصل معك.', 'أدخل كل استفسار في مسار عمل يمكن تتبّعه.']),
+ ('Stop relying on memory for follow-ups', ['Record what the customer asked for.', 'Choose the next useful action.', 'Set a reminder with a named owner.'], ['دوّن ما طلبه العميل.', 'اختر الإجراء التالي المفيد.', 'اضبط تذكيرًا وحدّد الشخص المسؤول عنه.']),
+ ('Clean your pipeline before automating', ['Define what each sales stage means.', 'Keep the latest conversation with the lead.', 'Move the record when a real event happens.'], ['حدد معنى كل مرحلة في المبيعات.', 'احتفظ بآخر محادثة مع العميل المحتمل.', 'انقل السجل إلى المرحلة المناسبة عند حدوث تطوّر فعلي.']),
+ ('Build a clearer team handoff', ['Pass the customer context with the task.', 'Name the receiving owner.', 'Confirm that the next step was accepted.'], ['انقل تفاصيل طلب العميل وسياقه مع المهمة.', 'حدّد بالاسم الشخص الذي سيتسلّم المسؤولية.', 'تأكّد من قبول المسؤول تنفيذ الخطوة التالية.']),
+ ('Automate one repeated task first', ['Choose a task your team repeats often.', 'Write its trigger and decision rules.', 'Test the result before expanding the workflow.'], ['اختر مهمة يكرّرها فريقك كثيرًا.', 'دوّن الحدث الذي يبدأ المهمة وقواعد اتخاذ القرار.', 'اختبر النتيجة قبل توسيع مسار العمل.']),
+ ('Turn a reply into a useful next step', ['Save the conversation to the lead record.', 'Identify what the person actually needs.', 'Assign the next action to the right person.'], ['احفظ المحادثة في سجل العميل المحتمل.', 'حدد ما يحتاجه العميل فعلاً.', 'كلّف الشخص المناسب بالإجراء التالي.']),
  ('Connect your form to follow-up', ['Ask only for the details you need.', 'Save the enquiry with its source.', 'Notify the person responsible for follow-up.'], ['اطلب المعلومات الضرورية فقط.', 'احفظ الاستفسار مع مصدره.', 'أبلغ المسؤول عن المتابعة.']),
- ('Make your sales stages useful', ['Use stage names your team understands.', 'Define the evidence needed to move forward.', 'Keep the next action visible at every stage.'], ['استخدم أسماء مراحل واضحة لفريقك.', 'حدد متى ينتقل العميل للمرحلة التالية.', 'اجعل الخطوة التالية واضحة دائماً.']),
- ('Map the process before choosing tools', ['Write the starting event.', 'List the handoffs and decisions.', 'Define what a completed result looks like.'], ['حدد نقطة بداية العملية.', 'سجل خطوات التسليم والقرارات.', 'حدد النتيجة المطلوبة بوضوح.']),
+ ('Make your sales stages useful', ['Use stage names your team understands.', 'Define the evidence needed to move forward.', 'Keep the next action visible at every stage.'], ['استخدم أسماء مراحل واضحة لفريقك.', 'حدّد الأدلة المطلوبة للانتقال إلى المرحلة التالية.', 'اجعل الإجراء التالي واضحًا في كل مرحلة.']),
+ ('Map the process before choosing tools', ['Write the starting event.', 'List the handoffs and decisions.', 'Define what a completed result looks like.'], ['دوّن الحدث الذي تبدأ به العملية.', 'أدرج مراحل تسليم العمل والقرارات المطلوبة.', 'حدّد كيف تبدو النتيجة المكتملة.']),
  ('Give your website one clear next step', ['Explain the service in plain language.', 'Put contact details where people can find them.', 'Connect incoming requests to your team.'], ['اشرح الخدمة بلغة واضحة.', 'اجعل بيانات التواصل سهلة الوصول.', 'اربط طلبات العملاء بفريقك.']),
- ('Keep customer context together', ['Store the correct contact details.', 'Attach the latest conversation.', 'Record the next task with an owner.'], ['احفظ بيانات التواصل الصحيحة.', 'أرفق آخر محادثة مع العميل.', 'حدد المهمة التالية والمسؤول عنها.']),
+ ('Keep customer context together', ['Store the correct contact details.', 'Attach the latest conversation.', 'Record the next task with an owner.'], ['احفظ بيانات التواصل الصحيحة.', 'أرفق أحدث محادثة.', 'سجّل المهمة التالية وحدّد المسؤول عنها.']),
  ('Build useful reminders', ['Tie the reminder to a real task.', 'Give it a clear due date.', 'Make the reminder reach the responsible person.'], ['اربط التذكير بمهمة حقيقية.', 'حدد موعداً واضحاً للتنفيذ.', 'أرسل التذكير للشخص المسؤول.']),
- ('Create a handoff checklist', ['Include the customer request.', 'Include what has already been done.', 'Include the next decision and its owner.'], ['أضف طلب العميل إلى قائمة التسليم.', 'وضح ما تم تنفيذه بالفعل.', 'حدد القرار التالي والمسؤول عنه.']),
- ('Make enquiry tracking a daily habit', ['Review new enquiries in one place.', 'Check that every active lead has a next step.', 'Close outdated tasks and update the record.'], ['راجع الاستفسارات الجديدة في مكان واحد.', 'تأكد من وجود خطوة تالية لكل عميل.', 'حدث المهام والسجلات باستمرار.']),
+ ('Create a handoff checklist', ['Include the customer request.', 'Include what has already been done.', 'Include the next decision and its owner.'], ['أدرج طلب العميل.', 'وضح ما تم تنفيذه بالفعل.', 'أدرج القرار التالي والشخص المسؤول عنه.']),
+ ('Make enquiry tracking a daily habit', ['Review new enquiries in one place.', 'Check that every active lead has a next step.', 'Close outdated tasks and update the record.'], ['راجع الاستفسارات الجديدة في مكان واحد.', 'تأكّد من وجود خطوة تالية لكل عميل محتمل نشط.', 'أغلق المهام التي لم تعد مطلوبة وحدّث السجل.']),
 ]
 
 
@@ -71,7 +71,7 @@ def setup():
     print(json.dumps({'sha256': hashlib.sha256(key).hexdigest()}))
 
 
-def render(day):
+def render(day, *, target=None):
     import numpy as np
     from PIL import Image, ImageDraw, ImageFont
     import soundfile as sf
@@ -81,16 +81,17 @@ def render(day):
     from bidi.algorithm import get_display
 
     OUT.mkdir(parents=True, exist_ok=True)
-    target = OUT / (day + '.mp4')
+    target = Path(target) if target else OUT / (day + '.mp4')
     if target.exists() and target.stat().st_size > 10000:
         return target
     n = (datetime.fromisoformat(day) - datetime(1970, 1, 1)).days
     title, steps, arabic = TIPS[n % len(TIPS)]
+    from ugc_captions import TITLES
     segments = [
-        ('BUSINESS HACK', title, 'نصيحة عملية لتنظيم أعمالك', 'Here is a practical business tip from One Step. ' + title + '.'),
-        *[(f'STEP {i+1}', step, ar, step + ' Keep it simple enough that your team can use it consistently.') for i, (step, ar) in enumerate(zip(steps, arabic))],
-        ('PUT IT INTO PRACTICE', 'Start small. Test it. Improve it.', 'ابدأ بخطوة بسيطة واختبر النتيجة.', 'Start with one workflow, test it with a real enquiry, and check the result before you expand it.'),
-        ('ONE STEP', 'Websites. CRM. Business automation.', 'راسل ون ستيب لمناقشة احتياجات شركتك.', 'One Step builds websites, CRM systems and enquiry automations. Message us to discuss how your business process could be organised.')
+        ('BUSINESS HACK', title, 'إليك نصيحة عملية لأعمالك من ون ستيب. '+TITLES[title], 'Here is a practical business tip from One Step. ' + title + '.'),
+        *[(f'STEP {i+1}', step, ar+' حافظ على بساطة هذه الخطوة ليسهل على فريقك تطبيقها باستمرار.', step + ' Keep it simple enough that your team can use it consistently.') for i, (step, ar) in enumerate(zip(steps, arabic))],
+        ('PUT IT INTO PRACTICE', 'Start small. Test it. Improve it.', 'ابدأ بمسار عمل واحد، واختبره باستفسار حقيقي، ثم تحقّق من النتيجة قبل توسيعه.', 'Start with one workflow, test it with a real enquiry, and check the result before you expand it.'),
+        ('ONE STEP', 'Websites. CRM. Business automation.', 'تطوّر ون ستيب المواقع الإلكترونية وأنظمة إدارة علاقات العملاء وأتمتة الاستفسارات. راسلنا لمناقشة كيفية تنظيم إجراءات العمل في شركتك.', 'One Step builds websites, CRM systems and enquiry automations. Message us to discuss how your business process could be organised.')
     ]
     kokoro = Kokoro(str(CACHE/'kokoro-v1.0.int8.onnx'), str(CACHE/'voices-v1.0.bin'))
     audio, boundaries = [], []
@@ -107,7 +108,7 @@ def render(day):
     wav = OUT / (day+'.wav'); sf.write(wav, wave, rate)
     ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
     fonts = {s: ImageFont.truetype(str(CACHE/'sora.ttf'), s) for s in (23,28,32,42,52)}
-    arfont = ImageFont.truetype(str(CACHE/'arabic.ttf'), 38)
+    arfont = ImageFont.truetype(str(CACHE/'arabic.ttf'), 48, layout_engine=ImageFont.Layout.BASIC)
     gold=(212,175,55); ivory=(247,245,240); muted=(180,180,175)
     def wrapped(text,font,max_width):
         lines=[];current=''
@@ -118,6 +119,8 @@ def render(day):
             else:current=candidate
         if current:lines.append(current)
         return lines
+    from ugc_style import caption_chunks
+    arabic_pages=[caption_chunks(item[2],max_words=8) for item in segments]
     cards=[]
     for i,(label,text,ar,_) in enumerate(segments):
         im=Image.new('RGB',(720,1280),(11,11,11));d=ImageDraw.Draw(im)
@@ -128,12 +131,6 @@ def render(day):
         for line in wrapped(text,fonts[52],610):
             d.text((55,y),line,font=fonts[52],fill=ivory);y+=76
         d.rectangle((55,y+32,145,y+37),fill=gold)
-        # Arabic subtitles match the instructional message; keep within platform safe area.
-        ary=880
-        for arline in wrapped(ar,arfont,580):
-            shaped=get_display(arabic_reshaper.reshape(arline))
-            box=d.textbbox((0,0),shaped,font=arfont)
-            d.text(((720-(box[2]-box[0]))/2,ary),shaped,font=arfont,fill=ivory);ary+=60
         d.text((55,1110),'0ne1stepuae@gmail.com',font=fonts[23],fill=muted)
         cards.append(im)
     tmp=OUT/(day+'.rendering.mp4')
@@ -145,6 +142,22 @@ def render(day):
             idx=next((i for i,(a,b) in enumerate(boundaries) if a<=t<b),len(cards)-1)
             progress=(t-boundaries[idx][0])/max(.1,boundaries[idx][1]-boundaries[idx][0])
             im=cards[idx].copy();d=ImageDraw.Draw(im)
+            pages=arabic_pages[idx]
+            text=pages[min(len(pages)-1,int(max(0,min(progress,.999999))*len(pages)))]
+            lines=[];line=''
+            for word in text.split():
+                trial=(line+' '+word).strip()
+                if line and arfont.getlength(get_display(arabic_reshaper.reshape(trial)))>600:
+                    lines.append(line);line=word
+                else:line=trial
+            if line:lines.append(line)
+            if len(lines)>3:raise RuntimeError('Arabic caption exceeds the safe subtitle area')
+            ary=870
+            for line in lines:
+                shaped=get_display(arabic_reshaper.reshape(line))
+                width=arfont.getlength(shaped)
+                d.text(((720-width)/2,ary),shaped,font=arfont,fill=ivory);ary+=64
+
             # Moving workflow markers and progress bar make this an animated explainer.
             d.line((90,745,630,745),fill=(64,57,34),width=3)
             for dot in range(3):
@@ -157,7 +170,7 @@ def render(day):
     if proc.wait()!=0: raise RuntimeError('Video encoding failed')
     if tmp.stat().st_size>12000000: raise RuntimeError('Video exceeds free upload size bound')
     target.write_bytes(tmp.read_bytes());tmp.unlink()
-    (OUT/(day+'.json')).write_text(json.dumps({'day':day,'title':title,'duration':duration,'format':'business-hack-motion-graphics','ugc':False,'bytes':target.stat().st_size}),encoding='utf-8')
+    (OUT/(day+'.json')).write_text(json.dumps({'day':day,'title':title,'duration':duration,'format':'business-hack-motion-graphics','ugc':False,'bytes':target.stat().st_size,'cues':[{'start':a,'end':b,'en':segment[3],'ar':segment[2]} for segment,(a,b) in zip(segments,boundaries)]}),encoding='utf-8')
     return target
 
 
