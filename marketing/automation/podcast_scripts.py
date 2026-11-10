@@ -33,6 +33,6 @@ def script(day):
     title,parts=TOPICS[date.fromisoformat(day).toordinal()%len(TOPICS)]
     parts=parts+[
      ('One Step builds websites, CRM systems, and enquiry automations.','ون ستيب تطوّر المواقع وأنظمة إدارة العملاء وحلول أتمتة الاستفسارات.'),
-     ('Message us to discuss your workflow.','راسلنا لنناقش سير العمل في شركتك.')]
+     ('Message One Step to discuss a practical workflow for your business.','راسل ون ستيب لنناقش سير عمل عملياً يناسب شركتك.')]
     return dict(title=title,fictional_ai_presenter=True,podcast_style=True,minimum_seconds=20,maximum_seconds=30,
                 cues=[dict(en=en,ar=ar) for en,ar in parts])
