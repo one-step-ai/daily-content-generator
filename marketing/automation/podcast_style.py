@@ -12,11 +12,13 @@ def render(source,metadata,target):
     import arabic_reshaper
     from bidi.algorithm import get_display
     from PIL import Image,ImageDraw,ImageFont
-    import imageio_ffmpeg
     from ugc_style import caption_chunks,active_cue
     data=json.loads(Path(metadata).read_text(encoding='utf-8'))
     duration=float(data['duration']);width,height,fps=720,1280,25
-    ffmpeg=shutil.which('ffmpeg') or imageio_ffmpeg.get_ffmpeg_exe()
+    ffmpeg=shutil.which('ffmpeg')
+    if not ffmpeg:
+        import imageio_ffmpeg
+        ffmpeg=imageio_ffmpeg.get_ffmpeg_exe()
     cache=ROOT/'state/marketing-cache'
     font=ImageFont.truetype(str(cache/'sora.ttf'),20)
     arabic=ImageFont.truetype(str(cache/'arabic.ttf'),46,layout_engine=ImageFont.Layout.BASIC)
