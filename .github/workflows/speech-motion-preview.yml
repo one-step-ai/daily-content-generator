@@ -6,6 +6,10 @@ on:
         type: string
         required: true
         description: Draft release containing the existing fictional presenter clip
+      audio_release:
+        type: string
+        default: ""
+        description: Optional draft release containing the new reviewed speech
       test_part:
         type: choice
         options: [all, head, lip]
@@ -49,6 +53,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           SOURCE_RELEASE: ${{ inputs.source_release }}
+          AUDIO_RELEASE: ${{ inputs.audio_release }}
           OMP_NUM_THREADS: '4'
           MKL_NUM_THREADS: '4'
           TEST_SECONDS: ${{ inputs.seconds }}
@@ -60,7 +65,12 @@ jobs:
           SOURCE=$(find state/lip-test -maxdepth 1 -name '*.mp4' -print -quit)
           test -n "$SOURCE"
           ffmpeg -y -v error -i "$SOURCE" -vn -ar 16000 state/lip-test/voice.wav
-          ffmpeg -y -v error -i "$SOURCE" -an -vf 'scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280,fps=25' -c:v libx264 -preset fast -crf 18 state/lip-test/source-720.mp4
+          if [ -n "$AUDIO_RELEASE" ]; then
+            mkdir -p state/lip-test/new-speech
+            gh release download "$AUDIO_RELEASE" --pattern '*.wav' --dir state/lip-test/new-speech
+            cp "$(find state/lip-test/new-speech -name '*.wav' -print -quit)" state/lip-test/voice.wav
+          fi
+          ffmpeg -y -v error -stream_loop -1 -i "$SOURCE" -t "$TEST_SECONDS" -an -vf 'scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280,fps=25' -c:v libx264 -preset fast -crf 18 state/lip-test/source-720.mp4
           CROP_ARGS=()
           if [ "$LANDMARK_CROP" = true ]; then CROP_ARGS=(--landmark-crop); fi
           python marketing/automation/lip_refine.py --source state/lip-test/source-720.mp4 --audio state/lip-test/voice.wav --output state/lip-test/lip-sync-candidate.mp4 --seconds "$TEST_SECONDS" "${CROP_ARGS[@]}"
@@ -68,6 +78,7 @@ jobs:
         if: inputs.finish_graphics
         env:
           TEST_SECONDS: ${{ inputs.seconds }}
+          AUDIO_RELEASE: ${{ inputs.audio_release }}
         run: |
           mkdir -p state/marketing-cache
           curl --fail --location --silent --show-error https://raw.githubusercontent.com/google/fonts/main/ofl/sora/Sora%5Bwght%5D.ttf --output state/marketing-cache/sora.ttf
@@ -76,7 +87,11 @@ jobs:
           import json,os
           from pathlib import Path
           seconds=float(os.environ['TEST_SECONDS'])
-          Path('state/lip-test/metadata.json').write_text(json.dumps({'duration':seconds,'cues':[{'start':0,'end':seconds,'en':'Turn enquiries into useful next steps.','ar':'فكرة عملية لتنظيم استفسارات العملاء في شركتك.'}]},ensure_ascii=False),encoding='utf-8')
+          if os.environ.get('AUDIO_RELEASE'):
+              data={'duration':seconds,'title':'Stop losing the next follow-up','verbatim_arabic':True,'fictional_ai_presenter':True,'cues':[{'start':0,'end':seconds,'en':'A customer sends an enquiry. Someone replies. Then nothing happens.','ar':'يرسل عميل استفسارًا، فيردّ عليه أحدهم، ثم تتوقف المتابعة.'}]}
+          else:
+              data={'duration':seconds,'cues':[{'start':0,'end':seconds,'en':'Turn enquiries into useful next steps.','ar':'فكرة عملية لتنظيم استفسارات العملاء في شركتك.'}]}
+          Path('state/lip-test/metadata.json').write_text(json.dumps(data,ensure_ascii=False),encoding='utf-8')
           PY
           python marketing/automation/ugc_style.py --source state/lip-test/lip-sync-candidate.mp4 --metadata state/lip-test/metadata.json --output state/lip-test/finished.mp4
           mv state/lip-test/finished.mp4 state/lip-test/lip-sync-candidate.mp4
