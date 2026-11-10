@@ -1,0 +1,60 @@
+name: Five-second podcast motion preview
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  preview:
+    if: github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 80
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.10'
+      - name: Prepare free short motion runtime
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p state/podcast-preview state/marketing-cache
+          gh release download owner-review-42889304354 --pattern '*.wav' --pattern '*.json' --dir state/podcast-preview
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg libgl1 libsndfile1
+          ffmpeg -y -v error -i state/podcast-preview/2026-11-10-ugc.wav -t 5 -ar 16000 state/podcast-preview/voice.wav
+          python marketing/automation/prepare_sadtalker.py --size 256
+          python -m venv state/sadtalker-venv
+          state/sadtalker-venv/bin/python -m pip install 'setuptools==69.5.1' wheel
+          state/sadtalker-venv/bin/python -m pip install 'torch==1.13.1+cpu' 'torchvision==0.14.1+cpu' 'torchaudio==0.13.1+cpu' --extra-index-url https://download.pytorch.org/whl/cpu
+          state/sadtalker-venv/bin/python -m pip install -r state/SadTalker/requirements.txt -c marketing/automation/sadtalker-constraints.txt
+      - name: Animate exactly five seconds with the original voice
+        env:
+          OMP_NUM_THREADS: '4'
+          MKL_NUM_THREADS: '4'
+          OPENBLAS_NUM_THREADS: '4'
+        run: |
+          cd state/SadTalker
+          ../sadtalker-venv/bin/python ../../marketing/automation/head_motion.py --motion-audio ../podcast-preview/voice.wav --cpu --size 256 --batch_size 1 --preprocess full --expression_scale 1.05 --source_image ../../marketing/automation/assets/fictional-podcast-presenter.png --driven_audio ../podcast-preview/voice.wav --result_dir ../podcast-preview/render
+      - name: Add minimal Arabic captions and visible AI label
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          state/sadtalker-venv/bin/python -m pip install arabic-reshaper==3.1.0 python-bidi==0.6.12 imageio-ffmpeg==0.4.9
+          curl --fail --location --silent --show-error https://raw.githubusercontent.com/google/fonts/main/ofl/sora/Sora%5Bwght%5D.ttf --output state/marketing-cache/sora.ttf
+          curl --fail --location --silent --show-error https://raw.githubusercontent.com/google/fonts/main/ofl/notonaskharabic/NotoNaskhArabic%5Bwght%5D.ttf --output state/marketing-cache/arabic.ttf
+          state/sadtalker-venv/bin/python - <<'PY'
+          from pathlib import Path
+          import json,sys
+          sys.path.insert(0,'marketing/automation')
+          from podcast_style import render
+          root=Path('state/podcast-preview')
+          data=json.loads((root/'2026-11-10-ugc.json').read_text(encoding='utf-8'));data['duration']=5
+          meta=root/'preview.json';meta.write_text(json.dumps(data,ensure_ascii=False),encoding='utf-8')
+          source=max((root/'render').glob('*.mp4'),key=lambda p:p.stat().st_mtime)
+          print(render(source,meta,root/'One-Step-Podcast-UGC-5s-Motion-Preview.mp4'))
+          PY
+          ffmpeg -v error -i state/podcast-preview/One-Step-Podcast-UGC-5s-Motion-Preview.mp4 -f null -
+          gh release create "podcast-motion-$GITHUB_RUN_ID" --draft --target main --title 'Five-second podcast motion preview - not published' --notes 'Lower-detail 256 face motion preview. Separate full-detail 512 render continues. Original fictional presenter and voice.'
+          gh release upload "podcast-motion-$GITHUB_RUN_ID" state/podcast-preview/One-Step-Podcast-UGC-5s-Motion-Preview.mp4
