@@ -1,0 +1,34 @@
+{
+  "title": "Fix the follow-up first",
+  "fictional_ai_presenter": true,
+  "minimum_seconds": 20,
+  "maximum_seconds": 30,
+  "style": "original realistic podcast interview, black and gold",
+  "cues": [
+    {
+      "en": "More enquiries will not fix a broken follow-up.",
+      "ar": "زيادة الاستفسارات لا تعالج مشكلة ضعف المتابعة."
+    },
+    {
+      "en": "Put every enquiry in one place.",
+      "ar": "اجمع كل استفسارات العملاء في مكان واحد."
+    },
+    {
+      "en": "Give it an owner, a next step, and a reminder.",
+      "ar": "حدّد مسؤولاً عن كل استفسار، وخطوة تالية، وتذكيراً بالمتابعة."
+    },
+    {
+      "en": "Your team can see what needs attention.",
+      "ar": "بهذه الطريقة، يعرف فريقك ما يحتاج إلى المتابعة."
+    },
+    {
+      "en": "One Step builds websites, CRM systems, and enquiry automations.",
+      "ar": "ون ستيب تطوّر المواقع وأنظمة إدارة العملاء وحلول أتمتة الاستفسارات."
+    },
+    {
+      "en": "Message us to discuss your workflow.",
+      "ar": "راسلنا لنناقش سير العمل في شركتك."
+    }
+  ],
+  "podcast_style": true
+}

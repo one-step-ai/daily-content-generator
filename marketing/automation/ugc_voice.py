@@ -40,9 +40,12 @@ def main():
         samples,rate=model.create(words,voice='am_michael',speed=.9,lang='en-us')
         samples=np.concatenate([samples,np.zeros(round(rate*.25),dtype=np.float32)])
         end=clock+len(samples)/rate;cues.append({'start':clock,'end':end,'en':words,'ar':ar});clock=end;audio.append(samples)
-    if clock<30 or clock>90:raise RuntimeError('UGC speech must be between 30 and 90 seconds')
+    minimum=custom.get('minimum_seconds',30) if custom else 30
+    maximum=custom.get('maximum_seconds',90) if custom else 90
+    if not 20<=minimum<=maximum<=90:raise ValueError('Invalid UGC duration bounds')
+    if not minimum<=clock<=maximum:raise RuntimeError(f'UGC speech must be between {minimum} and {maximum} seconds; got {clock:.2f}')
     sf.write(out/(day+'-ugc.wav'),np.concatenate(audio),rate)
-    (out/(day+'-ugc.json')).write_text(json.dumps({'day':day,'duration':clock,'title':title,'cues':cues,'fictional_ai_presenter':True,'verbatim_arabic':custom is not None,'script_sha256':script_hash},ensure_ascii=False),encoding='utf-8')
+    (out/(day+'-ugc.json')).write_text(json.dumps({'day':day,'duration':clock,'title':title,'cues':cues,'fictional_ai_presenter':True,'verbatim_arabic':custom is not None,'script_sha256':script_hash,'minimum_seconds':minimum,'maximum_seconds':maximum,'podcast_style':bool(custom and custom.get('podcast_style'))},ensure_ascii=False),encoding='utf-8')
     print(json.dumps({'day':day,'ugc_speech_seconds':clock}))
 
 if __name__=='__main__':main()

@@ -1,4 +1,4 @@
-name: Owner review - new fictional presenter script
+name: Owner review - realistic podcast UGC
 on:
   workflow_dispatch:
 permissions:
@@ -36,7 +36,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends ffmpeg espeak-ng libsndfile1
           python -m pip install -r marketing/automation/requirements.txt
           python marketing/automation/bootstrap.py
-          python marketing/automation/ugc_voice.py --script marketing/automation/scripts/2026-11-10-review.json
+          python marketing/automation/ugc_voice.py --script marketing/automation/scripts/2026-11-10-podcast-25s.json
       - name: Save generic review inputs
         env:
           GH_TOKEN: ${{ github.token }}

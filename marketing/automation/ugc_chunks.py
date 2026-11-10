@@ -50,7 +50,7 @@ def render_chunk(day,index,enhanced_motion=False,lip_python=None,half=None):
     if enhanced_motion:
         command=[sys.executable,str(ROOT/'marketing/automation/head_motion.py'),'--motion-audio',str(full_audio),'--motion-offset',str(low/25)]
     subprocess.run(command+['--cpu','--size','512','--batch_size','1','--preprocess','full','--expression_scale','1.08' if enhanced_motion else '1.0',
-        '--source_image',str(ROOT/'marketing/automation/assets/fictional-presenter.png'),
+        '--source_image',str(ROOT/'marketing/automation/assets'/('fictional-podcast-presenter.png' if data.get('podcast_style') else 'fictional-presenter.png')),
         '--driven_audio',str(wav),'--result_dir',str(results)],cwd=sadtalker,check=True)
     raw=max(results.glob('*.mp4'),key=lambda f:f.stat().st_mtime)
     refined=False
@@ -77,7 +77,9 @@ def assemble(day,subshots=False):
     subprocess.run([ffmpeg(),'-y','-v','error','-f','concat','-safe','0','-i',str(concat),
         '-i',str(ROOT/'state/daily-marketing'/(day+'-ugc.wav')),'-map','0:v:0','-map','1:a:0',
         '-c:v','copy','-c:a','aac','-b:a','128k','-movflags','+faststart',str(joined)],check=True)
-    from ugc_style import render
+    from ugc_style import render as legacy_render
+    from podcast_style import render as podcast_render
+    render=podcast_render if json.loads(meta.read_text(encoding='utf-8')).get('podcast_style') else legacy_render
     target=ROOT/'state/daily-marketing'/(day+'-ugc.mp4')
     print(json.dumps(render(joined,meta,target)))
 

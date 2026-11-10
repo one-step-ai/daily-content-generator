@@ -30,7 +30,7 @@ def main():
         temporary.replace(target)
     probe=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_entries','format=duration:stream=codec_type,codec_name,width,height','-of','json',str(target)],text=True))
     duration=float(probe['format']['duration'])
-    if duration<30 or abs(duration-data['duration'])>1 or not any(s['codec_type']=='video' and s['codec_name']=='h264' and s.get('height')==1280 for s in probe['streams']) or not any(s['codec_type']=='audio' for s in probe['streams']):raise RuntimeError('UGC export validation failed')
+    if duration<data.get('minimum_seconds',30) or duration>data.get('maximum_seconds',90) or abs(duration-data['duration'])>1 or not any(s['codec_type']=='video' and s['codec_name']=='h264' and s.get('height')==1280 for s in probe['streams']) or not any(s['codec_type']=='audio' for s in probe['streams']):raise RuntimeError('UGC export validation failed')
     if target.stat().st_size>12000000:raise RuntimeError('UGC file exceeds upload bound')
     if a.render_only:
         print(json.dumps({'day':day,'ugc_rendered':True,'duration':duration}));return
