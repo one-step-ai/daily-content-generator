@@ -28,7 +28,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        variant: [0, 1]
+        variant: [0, 1, 2]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -36,21 +36,21 @@ jobs:
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
         with:
           python-version: '3.12'
-      - name: Check today's two videos and story
+      - name: Check today's three videos and story
         id: ready
         env:
           MARKETING_UPLOAD_KEY: ${{ secrets.MARKETING_UPLOAD_KEY }}
           MARKETING_UPLOAD_URL: ${{ secrets.MARKETING_UPLOAD_URL }}
         run: python marketing/automation/cloud_status.py
       - name: Prepare the approved free cartoon renderer
-        if: inputs.verify_only != true && (inputs.style_preview == true || ((matrix.variant == 0 && (steps.ready.outputs.business_ready != 'true' || steps.ready.outputs.story_ready != 'true')) || (matrix.variant == 1 && steps.ready.outputs.ugc_ready != 'true')))
+        if: inputs.verify_only != true && (inputs.style_preview == true || ((matrix.variant == 0 && (steps.ready.outputs.business_ready != 'true' || steps.ready.outputs.story_ready != 'true')) || (matrix.variant == 1 && steps.ready.outputs.ugc_ready != 'true') || (matrix.variant == 2 && steps.ready.outputs.third_ready != 'true')))
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends espeak-ng libsndfile1
           python -m pip install -r marketing/automation/requirements.txt
           python marketing/automation/bootstrap.py
       - name: Generate the approved-style daily video and matching story
-        if: inputs.verify_only != true && (inputs.style_preview == true || ((matrix.variant == 0 && (steps.ready.outputs.business_ready != 'true' || steps.ready.outputs.story_ready != 'true')) || (matrix.variant == 1 && steps.ready.outputs.ugc_ready != 'true')))
+        if: inputs.verify_only != true && (inputs.style_preview == true || ((matrix.variant == 0 && (steps.ready.outputs.business_ready != 'true' || steps.ready.outputs.story_ready != 'true')) || (matrix.variant == 1 && steps.ready.outputs.ugc_ready != 'true') || (matrix.variant == 2 && steps.ready.outputs.third_ready != 'true')))
         env:
           MARKETING_UPLOAD_KEY: ${{ secrets.MARKETING_UPLOAD_KEY }}
           MARKETING_UPLOAD_URL: ${{ secrets.MARKETING_UPLOAD_URL }}
@@ -65,8 +65,10 @@ jobs:
             gh release create "$TAG" --draft --target main --title 'Approved cartoon daily-style validation' --notes 'Generic demonstration only; no media upload or social publication.'
             if [ "$VIDEO_VARIANT" = 0 ]; then
               gh release upload "$TAG" "state/daily-marketing/$MEDIA_DAY.mp4" "state/daily-marketing/$MEDIA_DAY-story.mp4"
-            else
+            elif [ "$VIDEO_VARIANT" = 1 ]; then
               gh release upload "$TAG" "state/daily-marketing/$MEDIA_DAY-second.mp4"
+            else
+              gh release upload "$TAG" "state/daily-marketing/$MEDIA_DAY-third.mp4"
             fi
           else
             python marketing/automation/daily_video.py --variant "$VIDEO_VARIANT"

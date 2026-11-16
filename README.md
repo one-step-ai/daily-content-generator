@@ -1,3 +1,7 @@
+# Approved cinematic fox daily renderer
+
+Owner approved16November2026. Three10-15second cartoons with different bilingual scripts per Dubai day, rendered free on standard public Linux CPU runners. Compact One Step banner and bold joined Arabic gold captions; visible fictional AI label. Approved animation bank is reused, with new am_michael narration; precise lip sync is not claimed. No private CRM code, customer data or credentials are included. Realistic UGC remains a separate workflow and approval policy. See marketing/automation/assets/APPROVED_FOX.md.
+
 # Current daily default: approved black-and-gold cartoon tutorial
 
 From11November2026Dubai: two distinct cartoon screen-tutorial videos, one matching short video story and five distinct feed posts per platform/day. The original cartoon instructor speaks and points while the screen types/highlights the reviewed instructions. Both videos use this approved style; the former photoreal SadTalker daily path has been replaced. English narration has full natural Arabic captions. Scheduled creation is free standard-public-runner CPU rendering, with no paid image/video API. The sections below retain prior build history; they are not the current daily design.

@@ -174,7 +174,7 @@ def render_legacy(day, *, target=None):
     return target
 
 
-def render(day, *, target=None, variant=0):
+def render_tutorial(day, *, target=None, variant=0):
     """The owner's approved black/gold cartoon style is the daily default."""
     import numpy as np
     import soundfile as sf
@@ -223,6 +223,11 @@ def render(day, *, target=None, variant=0):
     return target
 
 
+def render(day, *, target=None, variant=0):
+    from fox_daily import render as fox_render
+    return fox_render(day, variant, target)
+
+
 def upload(path,day,kind="business"):
     receipt=OUT/(day+('' if kind=='business' else '-'+kind)+'.uploaded.json')
     if receipt.exists():return json.loads(receipt.read_text())
@@ -238,7 +243,7 @@ def already_uploaded(day,kind="business"):
     req=urllib.request.Request(API.replace('mode=upload-video','mode=video-status'),data=b'{}',method='POST',headers={'Content-Type':'application/json','x-marketing-upload-key':key})
     try:
         with urllib.request.urlopen(req,timeout=20) as response:result=json.load(response)
-        if result.get('day')==day and result.get({'business':'businessReady','ugc':'ugcReady','story':'storyReady'}[kind]) is True:
+        if result.get('day')==day and result.get({'business':'businessReady','ugc':'ugcReady','story':'storyReady','cartoon3':'thirdReady'}[kind]) is True:
             OUT.mkdir(parents=True,exist_ok=True)
             (OUT/(day+('' if kind=='business' else '-'+kind)+'.uploaded.json')).write_text(json.dumps({'day':day,'source':'existing-cloud-media'}),encoding='utf-8')
             return True
@@ -248,13 +253,13 @@ def already_uploaded(day,kind="business"):
 
 
 def main():
-    parser=argparse.ArgumentParser();parser.add_argument('--setup',action='store_true');parser.add_argument('--render-only',action='store_true');parser.add_argument('--variant',type=int,choices=(0,1),default=0)
+    parser=argparse.ArgumentParser();parser.add_argument('--setup',action='store_true');parser.add_argument('--render-only',action='store_true');parser.add_argument('--variant',type=int,choices=(0,1,2),default=0)
     args=parser.parse_args()
     if args.setup:setup();return
     day=datetime.now(timezone(timedelta(hours=4))).date().isoformat()
-    kind='ugc' if args.variant else 'business'
+    kind=['business','ugc','cartoon3'][args.variant]
     ready=not args.render_only and already_uploaded(day,kind)
-    story_ready=args.variant==1 or (not args.render_only and already_uploaded(day,'story'))
+    story_ready=args.variant!=0 or (not args.render_only and already_uploaded(day,'story'))
     if ready and story_ready:
         print(json.dumps({'day':day,'variant':args.variant,'reused_cloud_media':True}));return
     path=render(day,variant=args.variant)
