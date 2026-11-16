@@ -40,7 +40,7 @@ def render(source,metadata,target):
             # Compact brand signature with a separate, visible AI disclosure.
             gold='#D4AF37'
             draw.rounded_rectangle((38,58,682,146),radius=22,fill=(10,12,15,225),outline=(212,175,55,95),width=1)
-            draw.rounded_rectangle((54,74,110,130),radius=14,fill=(212,175,55,23))
+            draw.rounded_rectangle((54,74,110,130),radius=14,fill=(27,25,18,255))
             for x,y,h in [(66,107,11),(77,96,22),(88,85,33)]:
                 draw.rounded_rectangle((x,y,x+8,y+h),radius=2,fill=gold)
             brand=ImageFont.truetype(str(cache/'sora.ttf'),25)
@@ -48,7 +48,7 @@ def render(source,metadata,target):
             badge=ImageFont.truetype(str(cache/'sora.ttf'),13)
             draw.text((126,77),'ONE STEP',font=brand,fill='#F9F4E8')
             draw.text((127,112),'BUSINESS SOLUTIONS',font=small,fill=gold)
-            draw.rounded_rectangle((486,84,661,121),radius=18,fill=(212,175,55,18),outline=(212,175,55,85))
+            draw.rounded_rectangle((486,84,661,121),radius=18,fill=(27,25,18,255),outline=(212,175,55,85))
             draw.ellipse((499,99,505,105),fill=gold)
             draw.text((516,94),'FICTIONAL AI',font=badge,fill='#EAE1CA')
             t=count/fps;cue=data['cues'][active_cue(data['cues'],t)]
