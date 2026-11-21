@@ -1,27 +1,29 @@
-# OmniRoute integration (proposed)
+# OmniRoute — integration preparation
 
-This repository is prepared for an optional OmniRoute AI gateway integration. No credentials or runtime routing are enabled by this document.
+Status: **prepared, not installed or activated**. This document does not change runtime routing, Codex settings, GitHub Actions, or the default branch.
 
-## Local prerequisites
+## Source and security
 
-- Install and run OmniRoute from its verified upstream distribution: https://github.com/UmeshOnAI/OmniRoute-AI-Gateway
-- Connect a model provider in the OmniRoute dashboard and create a scoped endpoint API key.
-- Keep API keys in your local secret manager or environment; never commit them to Git.
-- Verify the gateway health endpoint before configuring any coding agents.
+Official upstream: https://github.com/cheaper-inference/OmniRoute
+Optional third-party agent skill: https://github.com/hongkongkiwi/omniroute-skill
 
-## Codex CLI
+Review the upstream release, install scripts, dependency permissions and the skill scripts before running them. The third-party skill is not part of the official gateway. Never commit credentials.
 
-Run `omniroute setup-codex --dry-run` to preview the proposed local Codex configuration. After reviewing the changes, run `omniroute setup-codex` on the machine hosting Codex. A remote gateway can be selected with `--remote <url> --api-key <key>` (avoid storing keys in shell history).
+## Gateway installation on the Codex host
 
-## Optional coding-agent skill
+1. Ensure a supported Node.js/npm installation is available on the actual host running Codex.
+2. Review the published package and its installation scripts, then install from the official npm package: `npm install -g omniroute`.
+3. Run `omniroute --help` to inspect supported commands for the installed version. Follow the upstream Codex integration instructions for that version; do not assume a specific setup subcommand exists.
+4. Start and configure the gateway following the upstream documentation. Configure at least one provider and store credentials outside Git.
+5. Configure Codex to use the gateway only after reviewing existing local Codex settings and preserving a backup.
 
-The third-party OmniRoute agent skill is documented at https://github.com/hongkongkiwi/omniroute-skill. Review its SKILL.md and scripts before installing into `~/.agents/skills/omniroute`. It requires a running OmniRoute server and a suitably scoped key.
+## Validation checklist
 
-## Validation
+- [ ] Gateway command runs on the Codex host
+- [ ] Gateway process starts and health check passes
+- [ ] Provider is configured without committing secrets
+- [ ] Codex can send a minimal request through the gateway
+- [ ] Fallback tested using a safe test model/provider
+- [ ] Optional third-party skill independently reviewed and installed if desired
 
-1. Verify OmniRoute is running and a provider is connected.
-2. Confirm the intended Codex profile is configured and can list models.
-3. Send a minimal test request and verify routing and fallback behavior.
-4. Ensure no credentials or local secrets are tracked by Git.
-
-This integration is opt-in; it does not change application traffic, GitHub Actions, or the default branch.
+No repository-side install can establish these local-host checks. Keep this branch unmerged until verification.
