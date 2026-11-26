@@ -2,7 +2,7 @@
 
 The daily workflow reads the active publisher order during its media check. When the publisher reports the cinematic order, this workflow generates the scheduled story and standalone UGC. The RoboHub reel task supplies four original cinematic reels through the publisher. The legacy renderer remains available for a legacy publisher or a manual preview.
 
-When the publisher also reports the original visual order, the RoboHub task generates a fresh video story and five feed pictures. The standalone workflow then skips the retired story render and continues the independent UGC job.
+When the publisher also reports the original visual order, the RoboHub task generates a fresh video story and eight feed pictures per Dubai day. Each picture uses a new design and original on-image quote. The standalone workflow then skips the retired story render and continues the independent UGC job.
 
 ## Legacy cinematic fox renderer
 
