@@ -1,4 +1,8 @@
-# Approved cinematic fox daily renderer
+# Standalone RoboHub media renderer
+
+The daily workflow reads the active publisher order during its media check. When the publisher reports the cinematic order, this workflow generates the scheduled story and standalone UGC. The RoboHub reel task supplies four original cinematic reels through the publisher. The legacy renderer remains available for a legacy publisher or a manual preview.
+
+## Legacy cinematic fox renderer
 
 Owner approved16November2026. Three10-15second cartoons with different bilingual scripts per Dubai day, rendered free on standard public Linux CPU runners. Compact One Step banner and bold joined Arabic gold captions; visible fictional AI label. Approved animation bank is reused, with new am_michael narration; precise lip sync is not claimed. No private CRM code, customer data or credentials are included. Realistic UGC remains a separate workflow and approval policy. See marketing/automation/assets/APPROVED_FOX.md.
 

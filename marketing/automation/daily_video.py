@@ -243,9 +243,11 @@ def already_uploaded(day,kind="business"):
     req=urllib.request.Request(API.replace('mode=upload-video','mode=video-status'),data=b'{}',method='POST',headers={'Content-Type':'application/json','x-marketing-upload-key':key})
     try:
         with urllib.request.urlopen(req,timeout=20) as response:result=json.load(response)
-        if result.get('day')==day and result.get({'business':'businessReady','ugc':'ugcReady','story':'storyReady','cartoon3':'thirdReady'}[kind]) is True:
+        retired = result.get('robohubReelOrder') == 'cinematic' and kind in ('business', 'cartoon3')
+        if result.get('day')==day and (retired or result.get({'business':'businessReady','ugc':'ugcReady','story':'storyReady','cartoon3':'thirdReady'}[kind]) is True):
             OUT.mkdir(parents=True,exist_ok=True)
-            (OUT/(day+('' if kind=='business' else '-'+kind)+'.uploaded.json')).write_text(json.dumps({'day':day,'source':'existing-cloud-media'}),encoding='utf-8')
+            source = 'replaced-by-robohub-order' if retired else 'existing-cloud-media'
+            (OUT/(day+('' if kind=='business' else '-'+kind)+'.uploaded.json')).write_text(json.dumps({'day':day,'source':source}),encoding='utf-8')
             return True
     except Exception:
         pass # Rendering remains the free fallback; upload admission is still day-idempotent.
@@ -254,11 +256,14 @@ def already_uploaded(day,kind="business"):
 
 def main():
     parser=argparse.ArgumentParser();parser.add_argument('--setup',action='store_true');parser.add_argument('--render-only',action='store_true');parser.add_argument('--variant',type=int,choices=(0,1,2),default=0)
+    parser.add_argument('--story-only', action='store_true', help='Render the independent video story without uploading a business reel')
     args=parser.parse_args()
+    if args.story_only and args.variant != 0:
+        parser.error('--story-only requires variant 0')
     if args.setup:setup();return
     day=datetime.now(timezone(timedelta(hours=4))).date().isoformat()
     kind=['business','ugc','cartoon3'][args.variant]
-    ready=not args.render_only and already_uploaded(day,kind)
+    ready=args.story_only or (not args.render_only and already_uploaded(day,kind))
     story_ready=args.variant!=0 or (not args.render_only and already_uploaded(day,'story'))
     if ready and story_ready:
         print(json.dumps({'day':day,'variant':args.variant,'reused_cloud_media':True}));return
