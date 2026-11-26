@@ -5,9 +5,9 @@ from pathlib import Path
 import urllib.request
 
 
-def render_plan(ready, variant, cinematic):
+def render_plan(ready, variant, cinematic, original=False):
     if variant == 0:
-        return not ready['story'] or (not cinematic and not ready['business'])
+        return (not original and not ready['story']) or (not cinematic and not ready['business'])
     if variant == 1:
         return not ready['ugc']
     if variant == 2:
@@ -21,6 +21,7 @@ def main():
     with urllib.request.urlopen(req,timeout=30) as response:data=json.load(response)
     ready={name:data.get(name+'Ready') is True for name in ('business','ugc','story','podcast','third')}
     cinematic = data.get('robohubReelOrder') == 'cinematic'
+    original = data.get('robohubVisualOrder') == 'original'
     variant = os.environ.get('VIDEO_VARIANT')
     output=os.environ.get('GITHUB_OUTPUT')
     if output:
@@ -28,7 +29,7 @@ def main():
             for name,value in ready.items():f.write(name+'_ready='+str(value).lower()+'\n')
             f.write('cinematic_order='+str(cinematic).lower()+'\n')
             if variant is not None:
-                f.write('render_needed='+str(render_plan(ready, int(variant), cinematic)).lower()+'\n')
+                f.write('render_needed='+str(render_plan(ready, int(variant), cinematic, original)).lower()+'\n')
     print(json.dumps(ready))
 
 if __name__=='__main__':main()

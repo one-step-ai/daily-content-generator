@@ -243,7 +243,8 @@ def already_uploaded(day,kind="business"):
     req=urllib.request.Request(API.replace('mode=upload-video','mode=video-status'),data=b'{}',method='POST',headers={'Content-Type':'application/json','x-marketing-upload-key':key})
     try:
         with urllib.request.urlopen(req,timeout=20) as response:result=json.load(response)
-        retired = result.get('robohubReelOrder') == 'cinematic' and kind in ('business', 'cartoon3')
+        retired = (result.get('robohubReelOrder') == 'cinematic' and kind in ('business', 'cartoon3')
+                   or result.get('robohubVisualOrder') == 'original' and kind == 'story')
         if result.get('day')==day and (retired or result.get({'business':'businessReady','ugc':'ugcReady','story':'storyReady','cartoon3':'thirdReady'}[kind]) is True):
             OUT.mkdir(parents=True,exist_ok=True)
             source = 'replaced-by-robohub-order' if retired else 'existing-cloud-media'
